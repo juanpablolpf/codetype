@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>codetype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000;
+    --fg: #ededed;
+    --muted: #a1a1a1;
+    --faint: #6e6e6e;
+    --pending: #565656;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.14);
+    --panel: rgba(255, 255, 255, 0.025);
+    --err: #ff6369;
+
+    /* cores que o código ganha conforme você digita */
+    --kw: #ff8fc0;
+    --st: #7fe0b6;
+    --fn: #8cb8ff;
+    --nu: #ffc488;
+    --cm: #767676;
+    --tg: #ff8fc0;
+    --at: #c8a8ff;
+    --ty: #7fd5e6;
+    --pr: #d9d9d9;
+    --pu: #9b9b9b;
+    --tx: #ededed;
+
+    --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 70% 45% at 50% -12%, rgba(255, 255, 255, 0.09), transparent 70%);
+    background-repeat: no-repeat;
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  .wrap { width: min(100% - 32px, 980px); margin-inline: auto; }
+
+  /* topo */
+  header.top {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 22px 0;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 17px; letter-spacing: -0.02em; }
+  .logo-mark { width: 9px; height: 18px; background: #fff; border-radius: 2px; }
+  .pb { font-size: 13px; color: var(--muted); }
+  .pb b { color: var(--fg); font-weight: 500; font-family: var(--mono); }
+
+  /* intro */
+  .intro { padding: 48px 0 32px; }
+  .intro h1 {
+    margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; font-weight: 600;
+    letter-spacing: -0.035em; max-width: 16ch;
+    background: linear-gradient(180deg, #fff 30%, #8f8f8f);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .intro p { margin: 14px 0 0; color: var(--muted); max-width: 52ch; }
+
+  /* configuração */
+  .config { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .seg {
+    display: inline-flex; padding: 3px; gap: 2px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--panel);
+  }
+  .seg button {
+    border: 0; background: transparent; cursor: pointer;
+    padding: 6px 13px; border-radius: 999px; font-size: 13px; color: var(--muted);
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .seg button:hover { color: var(--fg); }
+  .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
+
+  /* editor */
+  .editor {
+    position: relative;
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+  }
+  .bar {
+    display: flex; align-items: stretch; justify-content: space-between;
+    border-bottom: 1px solid var(--line); min-height: 44px; padding-right: 16px;
+  }
+  .tab {
+    display: flex; align-items: center; gap: 8px; padding: 0 18px;
+    font-family: var(--mono); font-size: 13px; color: var(--fg);
+    border-right: 1px solid var(--line); box-shadow: inset 0 -1px 0 #fff;
+  }
+  .tab i { width: 7px; height: 7px; border-radius: 50%; background: var(--dot, #fff); }
+  .live { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .live b { color: var(--fg); font-weight: 500; }
+
+  .body { position: relative; display: flex; padding: 22px 0; cursor: text; }
+  .gutter, .viewport { font-family: var(--mono); font-size: 17px; line-height: 1.85; }
+  .gutter {
+    flex: none; overflow: hidden; padding: 0 18px 0 20px; text-align: right;
+    color: #3d3d3d; user-select: none; font-variant-numeric: tabular-nums;
+  }
+  .gutter span { display: block; transition: color 0.15s; }
+  .gutter span.cur { color: var(--muted); }
+  .viewport {
+    position: relative; flex: 1; min-width: 0;
+    overflow-x: auto; overflow-y: hidden; padding-right: 24px;
+    scrollbar-width: thin; scrollbar-color: #333 transparent;
+    transition: filter 0.2s, opacity 0.2s;
+  }
+  .inner, .gutter-inner { transition: transform 0.18s ease-out; }
+  .inner { position: relative; width: max-content; }
+  pre.code { margin: 0; font: inherit; white-space: pre; }
+
+  .ch { color: var(--pending); }
+  .ch.ok, .ch.auto { color: var(--tc); }
+  .ch.err { color: var(--err); background: rgba(255, 99, 105, 0.16); border-radius: 2px; }
+  .ch.nl { color: transparent; }
+  .ch.nl.err { color: var(--err); }
+  .t-kw { --tc: var(--kw); } .t-st { --tc: var(--st); } .t-fn { --tc: var(--fn); }
+  .t-nu { --tc: var(--nu); } .t-cm { --tc: var(--cm); } .t-tg { --tc: var(--tg); }
+  .t-at { --tc: var(--at); } .t-ty { --tc: var(--ty); } .t-pr { --tc: var(--pr); }
+  .t-pu { --tc: var(--pu); } .t-tx { --tc: var(--tx); }
+
+  .curline {
+    position: absolute; left: -24px; right: -24px; top: 0;
+    background: rgba(255, 255, 255, 0.03); pointer-events: none;
+    transition: transform 0.12s ease-out;
+  }
+  .caret {
+    position: absolute; left: 0; top: 0; width: 2px; border-radius: 1px;
+    background: #fff; pointer-events: none;
+    transition: transform 0.09s ease-out;
+  }
+  .caret.idle { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .editor.blurred .viewport, .editor.blurred .gutter { filter: blur(4px); opacity: 0.45; }
+  .editor.blurred .caret { display: none; }
+  .refocus {
+    position: absolute; inset: 0; display: none; place-items: center;
+    color: var(--fg); font-size: 14px; pointer-events: none;
+  }
+  .editor.blurred .refocus { display: grid; }
+
+  #inp {
+    position: absolute; left: 0; top: 0; width: 1px; height: 1px;
+    opacity: 0; border: 0; padding: 0; resize: none; overflow: hidden;
+  }
+
+  /* resultado */
+  .results { display: none; padding: 28px 28px 24px; }
+  .editor.done .body { display: none; }
+  .editor.done .results { display: block; }
+  .res-top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 28px 44px; }
+  .res-main { line-height: 1; }
+  .res-main .num { font-size: clamp(64px, 11vw, 96px); font-weight: 600; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+  .res-main .unit { font-size: 15px; color: var(--muted); margin-left: 6px; }
+  .res-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 18px 28px; flex: 1; min-width: 260px; padding-bottom: 8px; }
+  .res-stats div { display: flex; flex-direction: column; gap: 2px; }
+  .res-stats span { font-size: 13px; color: var(--muted); }
+  .res-stats b { font-family: var(--mono); font-weight: 500; font-size: 20px; }
+  .res-stats b small { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .res-stats b .bad { color: var(--err); }
+  .chart { margin-top: 28px; }
+  .chart svg { display: block; width: 100%; height: 170px; overflow: visible; }
+  .legend { display: flex; gap: 18px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 2px; background: #fff; }
+  .legend i.raw { background: #4d4d4d; }
+  .legend i.err { width: 6px; height: 6px; border-radius: 50%; background: var(--err); }
+  .res-foot {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+    margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line);
+  }
+  .verdict { color: var(--muted); font-size: 14px; }
+  .verdict.new { color: var(--fg); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 500;
+    border: 1px solid var(--line-strong); background: transparent; color: var(--fg);
+    transition: background-color 0.15s, opacity 0.15s;
+  }
+  .btn:hover { background: rgba(255, 255, 255, 0.06); }
+  .btn.primary { background: #fff; color: #000; border-color: #fff; }
+  .btn.primary:hover { opacity: 0.88; background: #fff; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* rodapé de atalhos */
+  .under { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .keys { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--faint); }
+  kbd {
+    font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px;
+    padding: 1px 6px; margin-right: 6px; background: rgba(255, 255, 255, 0.03);
+  }
+  .touch-btns { display: none; }
+
+  /* explicação linha a linha */
+  .explain { margin-top: 20px; scroll-margin-top: 20px; }
+  .explain h2 { margin: 0 0 14px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .ex {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); overflow: hidden;
+  }
+  .ex + .ex { margin-top: 14px; }
+  .ex-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--line); }
+  .ex-file { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 13px; }
+  .ex-file i { width: 7px; height: 7px; border-radius: 50%; }
+  .ex-head p { margin: 8px 0 0; color: var(--muted); max-width: 70ch; }
+  .ex-row {
+    display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px;
+    padding: 12px 22px; border-top: 1px solid var(--line);
+    transition: background-color 0.15s;
+  }
+  .ex-row:first-of-type { border-top: 0; }
+  .ex-row:hover { background: rgba(255, 255, 255, 0.025); }
+  .ex-row.quiet { padding-block: 6px; }
+  .ex-code {
+    margin: 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.75;
+    white-space: pre; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
+  }
+  .ex-ln { display: block; }
+  .ex-n { display: inline-block; width: 3ch; margin-right: 12px; text-align: right; color: #3d3d3d; user-select: none; }
+  .ex-code [class^="t-"] { color: var(--tc); }
+  .ex-note { margin: 0; padding-top: 2px; font-size: 14px; line-height: 1.6; color: #c9c9c9; }
+  .ex-row.quiet .ex-code { opacity: 0.55; }
+
+  footer { padding: 64px 0 40px; color: var(--faint); font-size: 13px; }
+
+  @media (hover: none) {
+    .keys { display: none; }
+    .touch-btns { display: flex; }
+  }
+  @media (max-width: 640px) {
+    .intro { padding: 24px 0 24px; }
+    .config { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
+    .config::-webkit-scrollbar { display: none; }
+    .seg { flex: none; }
+    .gutter, .viewport { font-size: 14px; }
+    .gutter { padding: 0 12px 0 12px; }
+    .body { padding: 16px 0; }
+    .tab { padding: 0 14px; font-size: 12px; }
+    .live { gap: 12px; font-size: 12px; }
+    .results { padding: 22px 18px 20px; }
+    .chart svg { height: 130px; }
+    .ex-row { grid-template-columns: 1fr; gap: 6px; padding: 12px 16px; }
+    .ex-head { padding: 16px; }
+    .ex-code { font-size: 13px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .inner, .gutter-inner, .caret, .curline { transition: none; }
+    .caret.idle { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="logo"><span class="logo-mark"></span>codetype</div>
+    <div class="pb" id="pb"></div>
+  </header>
+
+  <section class="intro">
+    <h1>Treine digitando código de verdade.</h1>
+    <p>Trechos reais de JavaScript, TypeScript, Vue, Python, SQL e CSS. O código ganha cor conforme você acerta, e a indentação da próxima linha vem sozinha quando você aperta Enter.</p>
+  </section>
+
+  <main>
+    <div class="config">
+      <div class="seg" id="langs" role="group" aria-label="Linguagem"></div>
+      <div class="seg" id="modes" role="group" aria-label="Modo"></div>
+    </div>
+
+    <div class="editor blurred" id="editor">
+      <div class="bar">
+        <div class="tab"><i></i><span id="file"></span></div>
+        <div class="live" id="live"></div>
+      </div>
+
+      <div class="body" id="body">
+        <div class="gutter" id="gutter"><div class="gutter-inner" id="gutterInner"></div></div>
+        <div class="viewport" id="viewport">
+          <div class="inner" id="inner">
+            <div class="curline" id="curline"></div>
+            <pre class="code" id="code"></pre>
+            <div class="caret idle" id="caret"></div>
+          </div>
+        </div>
+        <div class="refocus">Clique aqui ou aperte uma tecla para digitar</div>
+        <textarea id="inp" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Digite o código"></textarea>
+      </div>
+
+      <div class="results" id="results" aria-live="polite"></div>
+    </div>
+
+    <section class="explain" id="explain" hidden></section>
+
+    <div class="under">
+      <div class="keys">
+        <span><kbd>tab</kbd>recomeçar</span>
+        <span><kbd>esc</kbd>outro trecho</span>
+        <span><kbd>enter</kbd>nova linha, já indentada</span>
+        <span><kbd>ctrl</kbd><kbd>⌫</kbd>apagar palavra</span>
+      </div>
+      <div class="btns touch-btns">
+        <button class="btn" data-act="restart">Recomeçar</button>
+        <button class="btn" data-act="next">Outro trecho</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>Seus recordes ficam salvos neste navegador, separados por linguagem e modo.</footer>
+</div>
+
+<!-- Trechos: cada um começa com "@@ nome-do-arquivo". Para adicionar, é só colar mais blocos. -->
+<textarea hidden class="snips" data-lang="js">
+@@ debounce.js
+export function debounce(fn, wait = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
+%% Cria uma versão da função que só roda depois que você para de chamá-la por um tempo. É o que se usa num campo de busca para não chamar a API a cada tecla.
+1: Exporta a função. Ela recebe a função original (fn) e o tempo de espera em milissegundos, que fica 300 se ninguém passar outro.
+2: Guarda o id do timer atual. Ele fica "preso" dentro da função devolvida, e isso é uma closure.
+3: Devolve uma função nova. O ...args junta todos os argumentos que ela receber num array.
+4: Toda vez que ela é chamada, cancela o timer anterior, que ainda não tinha disparado.
+5: Agenda a função original para rodar depois de wait ms, repassando os mesmos argumentos.
+6-7: Fecha a função devolvida e a debounce.
+
+@@ api.js
+async function buscarUsuario(id) {
+  const res = await fetch(`/api/usuarios/${id}`);
+  if (!res.ok) {
+    throw new Error(`Erro ${res.status}`);
+  }
+  return res.json();
+}
+%% Busca um usuário na API e trata o caso de erro.
+1: O async permite usar await lá dentro, e a função passa a devolver sempre uma Promise.
+2: Faz a requisição GET. A template string com ${id} monta a URL com o id, e o await espera a resposta chegar.
+3-5: O res.ok é falso para status fora de 200 a 299 (404, 500...). Nesse caso a função lança um erro com o status, e quem chamou pode pegar com try/catch.
+6: Converte o corpo da resposta de JSON para objeto. Isso também é uma Promise, por isso pode ser devolvido direto.
+
+@@ carrinho.js
+const total = itens
+  .filter((item) => item.ativo)
+  .map((item) => item.preco * item.qtd)
+  .reduce((soma, valor) => soma + valor, 0);
+
+console.log(total.toFixed(2));
+%% Calcula o total de um carrinho encadeando métodos de array.
+1: Começa pela lista itens. Cada linha seguinte aplica um método no resultado da anterior.
+2: O filter mantém só os itens em que ativo é verdadeiro.
+3: O map troca cada item pelo subtotal dele (preço vezes quantidade), e a lista vira um array de números.
+4: O reduce soma todos esses números. O 0 no final é o valor inicial da soma.
+6: O toFixed(2) formata com duas casas decimais (vira texto, ex.: "59.90") e o resultado aparece no console.
+
+@@ server.js
+import express from "express";
+
+const app = express();
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true, hora: Date.now() });
+});
+
+app.listen(3000, () => console.log("rodando"));
+%% Um servidor Express mínimo com uma rota de "saúde", usada para checar se a API está de pé.
+1: Importa o Express, a biblioteca de servidor HTTP mais usada no Node.
+3: Cria a aplicação.
+4: Middleware que lê o corpo das requisições em JSON e coloca em req.body.
+6: Registra uma rota GET em /health. O req é o pedido que chegou, e o res é a resposta que você monta.
+7: Responde com um JSON que tem ok e a hora atual em milissegundos.
+8: Fecha a rota.
+10: Liga o servidor na porta 3000 e avisa no terminal quando ele está pronto.
+
+@@ agrupar.js
+function agruparPor(lista, chave) {
+  return lista.reduce((grupos, item) => {
+    const valor = item[chave];
+    grupos[valor] ??= [];
+    grupos[valor].push(item);
+    return grupos;
+  }, {});
+}
+%% Agrupa uma lista de objetos por um campo, por exemplo pedidos por status.
+1: Recebe a lista e o nome do campo usado para agrupar (ex.: "status").
+2: O reduce percorre a lista montando um objeto acumulador chamado grupos.
+3: Lê o valor do campo no item. Os colchetes permitem usar um nome de campo que está guardado numa variável.
+4: O ??= só cria o array vazio se aquele grupo ainda não existir (se for null ou undefined).
+5: Coloca o item no grupo dele.
+6: Devolve o acumulador para a próxima volta do reduce.
+7: O {} é o valor inicial, ou seja, começa com um objeto vazio.
+</textarea>
+
+<textarea hidden class="snips" data-lang="ts">
+@@ tipos.ts
+type Status = "pendente" | "aprovado" | "recusado";
+
+interface Reembolso {
+  id: string;
+  valor: number;
+  status: Status;
+  criadoEm: Date;
+}
+%% Descreve o formato de um reembolso, como no RefundPay. Isso só existe para o TypeScript checar o código e some quando ele vira JavaScript.
+1: Um tipo união: Status só aceita um desses três textos. Qualquer outro dá erro antes mesmo de rodar.
+3: A interface define o formato que um objeto Reembolso precisa ter.
+4-5: O id é texto e o valor é número.
+6: O status usa o tipo da linha 1, então só aceita os três valores.
+7: O criadoEm é um objeto Date.
+
+@@ http.ts
+export async function get<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(res.statusText);
+  return (await res.json()) as T;
+}
+%% Um GET reaproveitável que já devolve a resposta com o tipo certo.
+1: O <T> é um genérico: quem chama diz o tipo esperado, ex.: get<Usuario>("/api/eu"), e a função promete devolver esse tipo.
+2-4: Faz a requisição avisando, pelo cabeçalho, que trabalha com JSON.
+5: Se o status não for de sucesso, lança um erro com a mensagem do status (ex.: "Not Found").
+6: Lê o JSON e diz ao TypeScript que ele tem o formato T. O as não confere nada de verdade, só confia.
+
+@@ result.ts
+type Result<T, E = Error> =
+  | { ok: true; data: T }
+  | { ok: false; error: E };
+
+function dividir(a: number, b: number): Result<number> {
+  if (b === 0) {
+    return { ok: false, error: new Error("b é zero") };
+  }
+  return { ok: true, data: a / b };
+}
+%% Um jeito de devolver sucesso ou erro sem lançar exceção, em que o TypeScript obriga quem chama a checar.
+1: O Result tem dois genéricos: T é o tipo do dado e E é o do erro, que vira Error se não for informado.
+2-3: Ou é sucesso (ok: true com data) ou é falha (ok: false com error). Quando você checa o ok, o TypeScript sabe qual dos dois tem na mão.
+5: A dividir promete devolver um Result com um número dentro.
+6-8: Dividir por zero vira uma falha com a mensagem de erro.
+9: No caso normal, devolve sucesso com o resultado.
+
+@@ cache.ts
+class Cache<K, V> {
+  private mapa = new Map<K, V>();
+
+  get(chave: K): V | undefined {
+    return this.mapa.get(chave);
+  }
+
+  set(chave: K, valor: V): this {
+    this.mapa.set(chave, valor);
+    return this;
+  }
+}
+%% Uma classe de cache genérica por cima de um Map.
+1: K é o tipo da chave e V é o do valor, escolhidos ao criar, ex.: new Cache<string, number>().
+2: O private faz com que só a própria classe enxergue o mapa. Um Map guarda pares de chave e valor.
+4-6: O get busca um valor. Ele pode voltar undefined se a chave não existir, e o tipo deixa isso claro.
+8: O set devolve this (a própria instância), e isso permite encadear: cache.set(a, 1).set(b, 2).
+9-10: Salva o par e devolve a instância.
+
+@@ planos.ts
+enum Plano {
+  Gratis = "gratis",
+  Pro = "pro",
+}
+
+const limites: Record<Plano, number> = {
+  [Plano.Gratis]: 3,
+  [Plano.Pro]: 100,
+};
+%% Limites por plano de assinatura, com o TypeScript garantindo que nenhum plano fique de fora.
+1-4: O enum cria um conjunto fixo de valores com nome. Quando o código roda, Plano.Pro vale "pro".
+6: Record<Plano, number> é um objeto com uma chave para cada plano, em que todos os valores são números. Se faltar um plano, dá erro.
+7-8: Os colchetes usam o valor do enum como nome da chave. O plano grátis tem limite 3 e o Pro tem 100.
+</textarea>
+
+<textarea hidden class="snips" data-lang="vue">
+@@ Contador.vue
+<script setup>
+import { ref, computed } from "vue";
+
+const contagem = ref(0);
+const dobro = computed(() => contagem.value * 2);
+</script>
+
+<template>
+  <button @click="contagem++">
+    {{ contagem }} x 2 = {{ dobro }}
+  </button>
+</template>
+%% Um botão que conta cliques e mostra o dobro. É o "olá mundo" da reatividade do Vue.
+1: O script setup é o jeito curto do Vue 3: tudo que você declara aqui já fica disponível no template.
+2: O ref cria um valor reativo e o computed cria um valor calculado a partir de outros.
+4: A contagem começa em 0. No script você lê e muda pelo .value. É parecido com o useState do React.
+5: O dobro recalcula sozinho sempre que a contagem muda. É parecido com o useMemo, mas sem lista de dependências.
+8: O template é o HTML do componente.
+9: O @click é o atalho de v-on:click. Dentro do template não precisa de .value.
+10: As chaves duplas mostram o valor na tela e atualizam sozinhas.
+
+@@ ListaTarefas.vue
+<template>
+  <ul>
+    <li v-for="tarefa in tarefas" :key="tarefa.id">
+      <input type="checkbox" v-model="tarefa.feita" />
+      <span :class="{ riscado: tarefa.feita }">
+        {{ tarefa.titulo }}
+      </span>
+    </li>
+  </ul>
+</template>
+%% Uma lista de tarefas com checkbox que risca a tarefa feita.
+3: O v-for repete o li para cada tarefa, como o .map no JSX. O :key ajuda o Vue a saber qual item é qual quando a lista muda.
+4: O v-model liga o checkbox ao campo feita nos dois sentidos: marcar muda o dado, e mudar o dado marca o checkbox.
+5: No :class com objeto, a classe riscado só entra quando tarefa.feita for verdadeiro.
+6: Mostra o título da tarefa.
+
+@@ useLocalStorage.js
+import { ref, watch } from "vue";
+
+export function useLocalStorage(chave, inicial) {
+  const salvo = localStorage.getItem(chave);
+  const valor = ref(salvo ? JSON.parse(salvo) : inicial);
+
+  watch(valor, (novo) => {
+    localStorage.setItem(chave, JSON.stringify(novo));
+  }, { deep: true });
+
+  return valor;
+}
+%% Um composable (o "hook" do Vue): um valor reativo que se salva sozinho no navegador.
+1: O watch observa um valor reativo e roda uma função sempre que ele muda.
+3: Composables costumam começar com use. Este recebe a chave do localStorage e o valor padrão.
+4: Lê o que já foi salvo. Volta null se não houver nada.
+5: Se tinha algo salvo, converte o texto JSON para objeto. Se não tinha, usa o valor inicial.
+7-8: Sempre que o valor mudar, salva de novo como texto JSON.
+9: O deep: true faz o watch perceber mudanças dentro do objeto ou array, e não só quando ele é trocado inteiro.
+11: Devolve o ref para o componente usar como qualquer outro.
+
+@@ Formulario.vue
+<script setup>
+import { reactive } from "vue";
+
+const form = reactive({ nome: "", email: "" });
+const emit = defineEmits(["enviar"]);
+
+function enviar() {
+  emit("enviar", { ...form });
+}
+</script>
+
+<template>
+  <form @submit.prevent="enviar">
+    <input v-model.trim="form.nome" placeholder="Nome" />
+    <button type="submit">Enviar</button>
+  </form>
+</template>
+%% Um formulário que avisa o componente pai quando é enviado.
+2: O reactive deixa um objeto inteiro reativo. Diferente do ref, ele não usa .value.
+4: O estado do formulário, com nome e email começando vazios.
+5: O defineEmits declara os eventos que este componente dispara para o pai, que escuta com @enviar.
+7-9: Dispara o evento enviar com uma cópia dos dados. O ...form faz a cópia para o pai não receber o objeto reativo original.
+13: O @submit.prevent chama enviar e evita que a página recarregue (o mesmo que event.preventDefault()).
+14: O v-model.trim liga o input ao form.nome e tira os espaços das pontas.
+15: O botão do tipo submit envia o formulário.
+
+@@ carrinho.js
+import { defineStore } from "pinia";
+
+export const useCarrinho = defineStore("carrinho", {
+  state: () => ({ itens: [] }),
+  getters: {
+    total: (s) => s.itens.reduce((t, i) => t + i.preco, 0),
+  },
+  actions: {
+    adicionar(item) {
+      this.itens.push(item);
+    },
+  },
+});
+%% Uma store do Pinia: um estado global do carrinho que qualquer componente pode usar.
+1: O Pinia é a biblioteca oficial de estado global do Vue, no papel que o Redux ou o Zustand têm no React.
+3: Cria a store com o id "carrinho". Nos componentes, você usa assim: const carrinho = useCarrinho().
+4: O state é uma função que devolve o estado inicial, aqui uma lista de itens vazia.
+5-7: Os getters são valores calculados, como o computed. O total soma os preços de todos os itens.
+8-11: As actions são as funções que mudam o estado. A adicionar coloca um item no carrinho, e o this é a própria store.
+</textarea>
+
+<textarea hidden class="snips" data-lang="py">
+@@ contar.py
+from collections import Counter
+
+def palavras_comuns(texto, n=5):
+    palavras = texto.lower().split()
+    return Counter(palavras).most_common(n)
+
+print(palavras_comuns("o rato roeu a roupa do rei"))
+%% Conta quais palavras mais aparecem num texto.
+1: O Counter é um dicionário que conta quantas vezes cada item aparece.
+3: O def cria a função. O n=5 é o valor padrão, ou seja, as 5 mais comuns.
+4: O lower() deixa tudo minúsculo para "Rato" e "rato" contarem juntos, e o split() quebra o texto nos espaços.
+5: Conta as palavras e devolve as n mais frequentes como pares (palavra, quantidade).
+7: Chama a função e mostra o resultado no terminal.
+
+@@ conta.py
+class Conta:
+    def __init__(self, titular, saldo=0):
+        self.titular = titular
+        self.saldo = saldo
+
+    def depositar(self, valor):
+        if valor <= 0:
+            raise ValueError("valor precisa ser positivo")
+        self.saldo += valor
+%% Uma classe de conta bancária com depósito validado.
+1: Define a classe Conta.
+2: O __init__ é o construtor e roda quando você cria Conta("Ana"). O self é a própria instância, como o this do JavaScript, só que escrito sempre.
+3-4: Guarda o titular e o saldo na instância. O saldo começa em 0 se não for informado.
+6: Um método. O primeiro parâmetro é sempre o self.
+7-8: Bloqueia depósito zero ou negativo lançando um erro (o raise é o throw do Python).
+9: Soma o valor ao saldo.
+
+@@ main.py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/itens/{item_id}")
+def ler_item(item_id: int, q: str | None = None):
+    return {"item_id": item_id, "q": q}
+%% Uma API com FastAPI, que é como um Express do Python, com validação automática pelos tipos.
+1-3: Importa e cria a aplicação.
+5: Um decorator: ele registra a função de baixo como rota GET. O {item_id} é um pedaço variável da URL.
+6: Os tipos fazem o trabalho: item_id precisa ser inteiro (se não for, a API responde 422 sozinha) e q é um parâmetro opcional da URL (?q=...).
+7: O dicionário devolvido vira JSON automaticamente.
+
+@@ arquivo.py
+import json
+from pathlib import Path
+
+def carregar(caminho):
+    arquivo = Path(caminho)
+    if not arquivo.exists():
+        return {}
+    with arquivo.open(encoding="utf-8") as f:
+        return json.load(f)
+%% Lê um arquivo JSON e devolve um dicionário vazio se ele não existir.
+1-2: O json lê e escreve JSON, e o Path é o jeito moderno de lidar com caminhos de arquivo.
+5: Transforma o texto do caminho num objeto Path.
+6-7: Se o arquivo não existe, devolve um dicionário vazio em vez de quebrar.
+8: O with abre o arquivo e garante que ele seja fechado no fim, mesmo se der erro. O utf-8 evita problema com acentos.
+9: Converte o conteúdo JSON em dicionário Python.
+
+@@ quadrados.py
+numeros = range(1, 21)
+pares = [n for n in numeros if n % 2 == 0]
+quadrados = {n: n ** 2 for n in pares}
+
+for chave, valor in quadrados.items():
+    print(f"{chave} ao quadrado = {valor}")
+%% Compreensões de lista e de dicionário, o jeito curto do Python de fazer filter e map.
+1: O range(1, 21) vai de 1 a 20, porque o número final não entra.
+2: Uma list comprehension: pega cada n e mantém só os pares. É um filter em uma linha.
+3: Uma dict comprehension: monta um dicionário de número para quadrado. O ** é potência.
+5: O items() devolve pares (chave, valor), que já são separados em duas variáveis.
+6: Numa f-string, as chaves dentro do texto são trocadas pelos valores, como na template string do JS.
+</textarea>
+
+<textarea hidden class="snips" data-lang="sql">
+@@ relatorio.sql
+SELECT c.nome,
+       COUNT(p.id) AS pedidos,
+       SUM(p.total) AS gasto
+FROM clientes c
+JOIN pedidos p ON p.cliente_id = c.id
+WHERE p.criado_em >= '2026-01-01'
+GROUP BY c.nome
+HAVING SUM(p.total) > 500
+ORDER BY gasto DESC
+LIMIT 10;
+%% Os 10 clientes que mais gastaram em 2026, entre os que passaram de 500.
+1-3: As colunas do resultado: o nome do cliente, quantos pedidos ele fez e quanto gastou no total. O AS dá nome à coluna.
+4: Parte da tabela clientes, apelidada de c.
+5: Junta cada cliente com os pedidos dele (apelido p), ligando pelo id do cliente. Clientes sem pedido ficam de fora.
+6: Só entram pedidos a partir de 1º de janeiro de 2026. O WHERE filtra as linhas antes de agrupar.
+7: Agrupa por cliente, para o COUNT e o SUM contarem por pessoa.
+8: O HAVING filtra depois de agrupar: só ficam clientes com mais de 500 no total.
+9-10: Ordena do maior gasto para o menor e pega só os 10 primeiros.
+
+@@ reembolsos.sql
+CREATE TABLE reembolsos (
+  id SERIAL PRIMARY KEY,
+  descricao TEXT NOT NULL,
+  valor NUMERIC(10, 2) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pendente',
+  criado_em TIMESTAMP DEFAULT NOW()
+);
+%% Cria a tabela de reembolsos no PostgreSQL.
+1: Cria a tabela reembolsos.
+2: O id é um número que aumenta sozinho (SERIAL) e identifica cada linha (PRIMARY KEY).
+3: Um texto de tamanho livre. O NOT NULL impede que fique vazio.
+4: O NUMERIC(10, 2) guarda dinheiro sem erro de arredondamento: até 10 dígitos, sendo 2 depois da vírgula.
+5: Um texto de até 20 caracteres, que começa como 'pendente' se ninguém informar.
+6: Data e hora, preenchidas automaticamente com o momento da criação.
+
+@@ estoque.sql
+UPDATE produtos
+SET estoque = estoque - 1
+WHERE id = 42 AND estoque > 0
+RETURNING id, estoque;
+%% Tira uma unidade do estoque de um produto sem deixar o estoque ficar negativo.
+1: Vai alterar linhas da tabela produtos.
+2: Diminui o estoque em 1.
+3: Só no produto 42 e só se ainda houver estoque. Sem o WHERE, a tabela inteira seria alterada.
+4: O RETURNING (do PostgreSQL) devolve como ficou a linha alterada. Se não voltar nada, o produto estava sem estoque.
+
+@@ receita.sql
+WITH vendas_mes AS (
+  SELECT date_trunc('month', criado_em) AS mes,
+         SUM(total) AS receita
+  FROM pedidos
+  GROUP BY 1
+)
+SELECT mes, receita
+FROM vendas_mes
+ORDER BY mes;
+%% A receita de cada mês, usando uma CTE, que é uma consulta com nome, como uma variável.
+1: O WITH cria uma tabela temporária chamada vendas_mes, que só existe dentro desta consulta.
+2: O date_trunc corta a data no começo do mês, então todos os pedidos de março viram "1º de março".
+3-4: Soma o total dos pedidos.
+5: O GROUP BY 1 agrupa pela primeira coluna do SELECT, que é o mês.
+7-9: Lê a tabela temporária e ordena do mês mais antigo para o mais novo.
+
+@@ clientes.sql
+CREATE INDEX idx_pedidos_cliente
+ON pedidos (cliente_id, criado_em DESC);
+
+INSERT INTO clientes (nome, email)
+VALUES ('Ana', 'ana@email.com')
+ON CONFLICT (email) DO NOTHING;
+%% Um índice para acelerar buscas e um insert que não duplica cliente.
+1-2: Cria um índice, como o índice de um livro: buscar os pedidos de um cliente, dos mais novos para os mais antigos, fica muito mais rápido.
+4-5: Insere uma cliente informando as colunas e os valores na mesma ordem.
+6: Se já existir alguém com esse email (a coluna precisa ser única), ignora em vez de dar erro.
+</textarea>
+
+<textarea hidden class="snips" data-lang="css">
+@@ botao.css
+.botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+}
+
+.botao:hover {
+  opacity: 0.85;
+}
+%% Um botão em formato de pílula, como os do Resend.
+1: Vale para todo elemento com class="botao".
+2: O inline-flex deixa o botão na linha do texto, mas organiza o conteúdo (texto e ícone) com flexbox.
+3: Centraliza os itens na vertical.
+4: O espaço entre o texto e o ícone.
+5: O espaço interno: 10px em cima e embaixo, 16px nas laterais.
+6: Um raio enorme deixa as pontas totalmente redondas, no formato de pílula.
+7-8: Fundo branco e texto preto.
+11-13: O :hover vale quando o mouse está em cima, e aí o botão fica um pouco transparente.
+
+@@ galeria.css
+.galeria {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+%% Uma grade que se ajusta sozinha à tela, sem precisar de media query.
+2: Transforma o elemento numa grade.
+3-4: Cria quantas colunas couberem (auto-fill), cada uma com pelo menos 220px e dividindo o espaço que sobra (1fr). No celular vira uma coluna e no desktop vira várias.
+5: O espaço entre as células.
+
+@@ tema.css
+:root {
+  --fundo: #000;
+  --texto: #ededed;
+  --borda: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: system-ui, sans-serif;
+}
+%% Variáveis de CSS para guardar as cores do tema num lugar só.
+1: O :root é o elemento html, então as variáveis declaradas aqui valem na página inteira.
+2-3: As variáveis começam com dois traços. Aqui, fundo preto e texto quase branco.
+4: O rgba é uma cor com transparência: branco com 8% de opacidade, bom para bordas discretas.
+7-9: O var() lê a variável. Para mudar o tema, basta trocar o valor no :root.
+10: Usa a fonte padrão do sistema e, se não houver, qualquer fonte sem serifa.
+
+@@ animacao.css
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.card {
+  animation: surgir 0.4s ease-out both;
+}
+%% Uma animação de entrada em que o card aparece subindo um pouco.
+1: O @keyframes cria uma animação com nome, aqui surgir.
+2: Começa invisível e 8px mais abaixo.
+3: Termina visível e na posição normal.
+6-7: Aplica no card: dura 0,4 s e desacelera no final (ease-out). O both mantém o estado inicial antes de começar e o final depois de terminar.
+
+@@ layout.css
+.container {
+  width: min(100% - 32px, 1080px);
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .menu { display: none; }
+}
+%% Um container centralizado com margem no celular, e um menu que some em telas pequenas.
+2: O min() escolhe o menor dos dois: a largura toda menos 32px (16px de cada lado) ou 1080px. Em telas largas, ele para em 1080.
+3: O margin-inline: auto centraliza na horizontal, com margem automática à esquerda e à direita.
+6: Uma media query: as regras de dentro só valem em telas de até 640px.
+7: Esconde o menu no celular.
+</textarea>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+
+  // ---------- linguagens ----------
+  const JS_KW = "const let var function return if else for while do async await import export from default new class extends try catch finally throw typeof instanceof in of null undefined true false this super switch case break continue yield delete void";
+  const TS_KW = JS_KW + " type interface enum implements private public protected readonly as keyof string number boolean any unknown never";
+  const PY_KW = "def class return if elif else for while in not and or is None True False import from as with try except finally raise lambda pass yield global async await self";
+  const SQL_KW = "SELECT FROM WHERE JOIN INNER LEFT RIGHT ON AS GROUP BY ORDER HAVING LIMIT DESC ASC AND OR NOT NULL CREATE TABLE PRIMARY KEY DEFAULT INSERT INTO VALUES UPDATE SET RETURNING WITH INDEX CONFLICT DO NOTHING SERIAL TEXT NUMERIC VARCHAR TIMESTAMP DELETE";
+  const set = (s) => new Set(s.split(" "));
+
+  const LANGS = {
+    js:  { nome: "JavaScript", dot: "#f7df1e", kw: set(JS_KW), line: "//", block: true },
+    ts:  { nome: "TypeScript", dot: "#3b82f6", kw: set(TS_KW), line: "//", block: true },
+    vue: { nome: "Vue", dot: "#42b883", kw: set(JS_KW), line: "//", block: true, markup: true },
+    py:  { nome: "Python", dot: "#ffd43b", kw: set(PY_KW), line: "#", deco: true },
+    sql: { nome: "SQL", dot: "#c8a8ff", kw: set(SQL_KW), line: "--", upper: true },
+    css: { nome: "CSS", dot: "#ff8fc0", kw: new Set(), block: true, css: true },
+  };
+  const MODES = [
+    { id: "trecho", nome: "Trecho inteiro" },
+    { id: "30", nome: "30 s" },
+    { id: "60", nome: "60 s" },
+    { id: "120", nome: "120 s" },
+  ];
+
+  // ---------- trechos ----------
+  const SNIPS = {};
+  document.querySelectorAll("textarea.snips").forEach((t) => {
+    SNIPS[t.dataset.lang] = t.value.split(/^@@ /m).filter((b) => b.trim()).map((b) => {
+      const nl = b.indexOf("\n");
+      const [raw, extra = ""] = b.slice(nl + 1).split(/^%% ?/m);
+      const code = raw.split("\n").map((l) => l.replace(/\s+$/, "")).join("\n").replace(/^\n+|\n+$/g, "");
+      const [summary = "", ...rest] = extra.trim().split("\n");
+      const notes = rest.map((l) => l.match(/^(\d+)(?:-(\d+))?:\s*(.+)$/)).filter(Boolean)
+        .map((m) => ({ from: +m[1], to: +(m[2] || m[1]), text: m[3] }));
+      return { file: b.slice(0, nl).trim(), code, summary: summary.trim(), notes };
+    });
+  });
+
+  // ---------- cores de sintaxe ----------
+  function tokenize(src, L) {
+    const t = new Array(src.length).fill("tx");
+    const R = [];
+    if (L.markup) R.push(["cm", /<!--[\s\S]*?-->/y]);
+    if (L.block) R.push(["cm", /\/\*[\s\S]*?\*\//y]);
+    if (L.line) R.push(["cm", new RegExp(L.line + ".*", "y")]);
+    R.push(["st", /`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/y]);
+    if (L.markup) {
+      R.push(["tg", /<\/?[A-Za-z][\w-]*|(?<![=-])\/?>/y]);
+      R.push(["at", /[@:]?[A-Za-z][\w.-]*(?==)/y]);
+    }
+    if (L.deco) R.push(["fn", /@[\w.]+/y]);
+    if (L.css) {
+      R.push(["kw", /@[\w-]+/y]);
+      R.push(["nu", /#[0-9a-fA-F]{3,8}\b/y]);
+      R.push(["fn", /\.[A-Za-z][\w-]*/y]);
+      R.push(["kw", /:[A-Za-z][\w-]*/y]);
+      R.push(["at", /--[\w-]+/y]);
+      R.push(["nu", /\d*\.?\d+(?:px|rem|em|%|s|ms|fr|vh|vw|deg)?/y]);
+      R.push(["at", /[A-Za-z][\w-]*(?=\s*:\s)/y]);
+      R.push(["fn", /[A-Za-z][\w-]*(?=\()/y]);
+      R.push(["ty", /[A-Za-z][\w-]*/y]);
+    } else {
+      R.push(["nu", /\d+(?:\.\d+)?/y]);
+      R.push(["id", /[A-Za-z_$][\w$]*/y]);
+    }
+
+    let i = 0;
+    while (i < src.length) {
+      let hit = false;
+      for (const [type, re] of R) {
+        re.lastIndex = i;
+        const m = re.exec(src);
+        if (m && m[0].length) {
+          const ty = type === "id" ? classify(m[0], i, src, L) : type;
+          t.fill(ty, i, i + m[0].length);
+          i += m[0].length;
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        if (/[{}()[\];,.:=+\-*/<>!&|?%^~]/.test(src[i])) t[i] = "pu";
+        i++;
+      }
+    }
+    return t;
+  }
+
+  function classify(word, at, src, L) {
+    if (L.kw.has(L.upper ? word.toUpperCase() : word)) return "kw";
+    let j = at + word.length;
+    while (src[j] === " ") j++;
+    if (src[j] === "(") return "fn";
+    if (src[at - 1] === ".") return "pr";
+    if (/^[A-Z]/.test(word)) return "ty";
+    return "tx";
+  }
+
+  // ---------- armazenamento (pode falhar em aba anônima) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  // ---------- estado ----------
+  let lang = LANGS[store.get("ct:lang", "ts")] ? store.get("ct:lang", "ts") : "ts";
+  let mode = MODES.some((m) => m.id === store.get("ct:mode")) ? store.get("ct:mode") : "trecho";
+  let snipIdx = -1, chars = [], spans = [], lineOf = [], totalLines = 1, pos = 0;
+  let phase = "idle"; // idle | run | done
+  let t0 = 0, tick = 0, carriedOk = 0, keys = 0, okKeys = 0, errKeys = 0, history = [], secKeys = 0, secErr = 0;
+  let LH = 30, runSnips = [];
+
+  const editor = $("#editor"), inp = $("#inp"), code = $("#code"), inner = $("#inner");
+  const viewport = $("#viewport"), gutterInner = $("#gutterInner"), caret = $("#caret");
+  const curline = $("#curline"), live = $("#live"), results = $("#results"), explainEl = $("#explain");
+  const SENT = " "; // caractere-sentinela para pegar o backspace no celular
+
+  // ---------- configuração ----------
+  function buildConfig() {
+    $("#langs").innerHTML = Object.entries(LANGS).map(([id, l]) =>
+      `<button type="button" data-lang="${id}" aria-pressed="${id === lang}">${l.nome}</button>`).join("");
+    $("#modes").innerHTML = MODES.map((m) =>
+      `<button type="button" data-mode="${m.id}" aria-pressed="${m.id === mode}">${m.nome}</button>`).join("");
+  }
+  $("#langs").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    lang = b.dataset.lang; store.set("ct:lang", lang); snipIdx = -1;
+    buildConfig(); newSnippet(); focusInput();
+  });
+  $("#modes").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    mode = b.dataset.mode; store.set("ct:mode", mode);
+    buildConfig(); restart(); focusInput();
+  });
+
+  function pbKey() { return `ct:pb:${lang}:${mode}`; }
+  function modeName() { return MODES.find((m) => m.id === mode).nome.toLowerCase(); }
+  function showPb() {
+    const pb = +store.get(pbKey(), 0);
+    $("#pb").innerHTML = pb ? `Recorde <b>${pb} wpm</b>` : "Sem recorde ainda";
+    $("#pb").title = `${LANGS[lang].nome}, ${modeName()}`;
+  }
+
+  // ---------- montar o trecho ----------
+  function pickSnippet() {
+    const list = SNIPS[lang];
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === snipIdx) i = (i + 1) % list.length;
+    snipIdx = i;
+  }
+
+  function load() {
+    const s = SNIPS[lang][snipIdx];
+    if (!runSnips.includes(snipIdx)) runSnips.push(snipIdx);
+    const types = tokenize(s.code, LANGS[lang]);
+    chars = [...s.code].map((ch, i) => ({ ch, base: "ch t-" + types[i] + (ch === "\n" ? " nl" : ""), st: "" }));
+    pos = 0;
+
+    const frag = document.createDocumentFragment();
+    spans = []; lineOf = [];
+    let line = 0;
+    chars.forEach((c, i) => {
+      const sp = document.createElement("span");
+      sp.className = c.base;
+      sp.textContent = c.ch === "\n" ? "↵" : c.ch;
+      frag.appendChild(sp);
+      if (c.ch === "\n") frag.appendChild(document.createTextNode("\n"));
+      spans.push(sp); lineOf.push(line);
+      if (c.ch === "\n") line++;
+    });
+    totalLines = line + 1;
+    code.replaceChildren(frag);
+    gutterInner.innerHTML = Array.from({ length: totalLines }, (_, i) => `<span>${i + 1}</span>`).join("");
+
+    $("#file").textContent = s.file;
+    editor.style.setProperty("--dot", LANGS[lang].dot);
+    measure();
+    skipIndent();
+    paintAll();
+  }
+
+  function measure() {
+    LH = parseFloat(getComputedStyle(viewport).lineHeight) || 30;
+    const maxLines = window.innerWidth < 640 ? 8 : 11;
+    const h = Math.min(totalLines, maxLines) * LH;
+    viewport.style.height = h + "px";
+    $("#gutter").style.height = h + "px";
+    curline.style.height = LH + "px";
+    caret.style.height = Math.round(LH * 0.62) + "px";
+  }
+
+  // pula espaços de indentação logo depois de uma quebra de linha
+  function skipIndent() {
+    if (pos !== 0 && chars[pos - 1].ch !== "\n") return;
+    while (pos < chars.length && chars[pos].ch === " ") { chars[pos].st = "auto"; pos++; }
+  }
+
+  function paint(i) { spans[i].className = chars[i].base + (chars[i].st ? " " + chars[i].st : ""); }
+  function paintAll() { chars.forEach((_, i) => paint(i)); place(); }
+
+  function place() {
+    if (!spans.length) return;
+    const end = pos >= spans.length;
+    const sp = spans[end ? spans.length - 1 : pos];
+    const x = sp.offsetLeft + (end ? sp.offsetWidth : 0);
+    const line = lineOf[end ? spans.length - 1 : pos];
+    caret.style.transform = `translate(${x}px, ${line * LH + (LH - caret.offsetHeight) / 2}px)`;
+    curline.style.transform = `translateY(${line * LH}px)`;
+
+    const vis = Math.round(viewport.clientHeight / LH) || totalLines;
+    const top = Math.max(0, Math.min(line - 2, totalLines - vis));
+    inner.style.transform = gutterInner.style.transform = `translateY(${-top * LH}px)`;
+
+    const w = viewport.clientWidth;
+    if (x - viewport.scrollLeft > w - 48) viewport.scrollLeft = x - w / 2;
+    else if (x < viewport.scrollLeft + 16) viewport.scrollLeft = Math.max(0, x - 48);
+
+    const prev = gutterInner.querySelector(".cur");
+    if (prev) prev.classList.remove("cur");
+    if (gutterInner.children[line]) gutterInner.children[line].classList.add("cur");
+  }
+
+  // ---------- teste ----------
+  function resetStats() {
+    clearInterval(tick);
+    phase = "idle"; carriedOk = keys = okKeys = errKeys = secKeys = secErr = 0; history = []; runSnips = [];
+    editor.classList.remove("done");
+    explainEl.hidden = true;
+    caret.classList.add("idle");
+    showPb(); showLive();
+  }
+  function restart() { resetStats(); load(); }
+  function newSnippet() { pickSnippet(); restart(); }
+
+  function start() {
+    phase = "run";
+    t0 = performance.now();
+    caret.classList.remove("idle");
+    tick = setInterval(onSecond, 1000);
+  }
+
+  const countOk = () => chars.reduce((n, c) => n + (c.st === "ok"), 0);
+  const elapsed = () => (performance.now() - t0) / 1000;
+
+  function onSecond() {
+    const s = history.length + 1;
+    history.push({ wpm: (carriedOk + countOk()) / 5 / (s / 60), raw: secKeys * 12, err: secErr });
+    secKeys = secErr = 0;
+    if (mode !== "trecho" && s >= +mode) finish();
+    else showLive();
+  }
+
+  function showLive() {
+    if (phase === "idle") {
+      live.innerHTML = `<span>${mode === "trecho" ? "comece a digitar" : `<b>${mode}</b> s`}</span>`;
+      return;
+    }
+    const secs = Math.max(elapsed(), 1);
+    const wpm = Math.round((carriedOk + countOk()) / 5 / (secs / 60));
+    const left = mode === "trecho"
+      ? `<span><b>${Math.round((pos / chars.length) * 100)}%</b></span>`
+      : `<span><b>${Math.max(0, +mode - history.length)}</b> s</span>`;
+    live.innerHTML = `${left}<span><b>${wpm}</b> wpm</span>`;
+  }
+
+  function type(c) {
+    if (phase === "done" || pos >= chars.length) return;
+    if (phase === "idle") start();
+    const cur = chars[pos];
+    keys++; secKeys++;
+    if (c === cur.ch) { cur.st = "ok"; okKeys++; }
+    else { cur.st = "err"; errKeys++; secErr++; }
+    paint(pos);
+    pos++;
+    if (cur.ch === "\n") { const from = pos; skipIndent(); for (let i = from; i < pos; i++) paint(i); }
+
+    if (pos >= chars.length) {
+      if (mode === "trecho") return finish();
+      // modo de tempo: emenda o próximo trecho sem parar o relógio
+      carriedOk += countOk();
+      pickSnippet(); load();
+    }
+    place(); showLive();
+  }
+
+  function backOne() {
+    if (pos === 0) return false;
+    let p = pos - 1;
+    while (p > 0 && chars[p].st === "auto") p--;
+    if (chars[p].st === "auto") return false; // só indentação antes: nada a apagar
+    for (let i = p; i < pos; i++) { chars[i].st = ""; paint(i); }
+    pos = p;
+    return true;
+  }
+  function back(word) {
+    if (phase !== "run") return;
+    if (!backOne()) return;
+    if (word) {
+      const isW = (ch) => /[\w$]/.test(ch);
+      const wasWord = isW(chars[pos].ch);
+      while (pos > 0 && chars[pos - 1].ch !== "\n" && (wasWord ? isW(chars[pos - 1].ch) : chars[pos - 1].ch === " ")) backOne();
+    }
+    place(); showLive();
+  }
+
+  function finish() {
+    clearInterval(tick);
+    const secs = mode === "trecho" ? Math.max(elapsed(), 0.5) : +mode;
+    if (mode === "trecho") {
+      const rest = secs - history.length;
+      if (rest > 0.2 || !history.length) history.push({ wpm: (carriedOk + countOk()) / 5 / (secs / 60), raw: secKeys * 12 / Math.max(rest, 0.2), err: secErr });
+    }
+    phase = "done";
+    const ok = carriedOk + countOk();
+    const wpm = Math.round(ok / 5 / (secs / 60));
+    const raw = Math.round(keys / 5 / (secs / 60));
+    const acc = keys ? Math.floor((okKeys / keys) * 100) : 0;
+    const raws = history.map((h) => h.raw);
+    const mean = raws.reduce((a, b) => a + b, 0) / (raws.length || 1);
+    const sd = Math.sqrt(raws.reduce((a, b) => a + (b - mean) ** 2, 0) / (raws.length || 1));
+    const cons = mean ? Math.max(0, Math.round(100 * (1 - sd / mean))) : 0;
+
+    const old = +store.get(pbKey(), 0);
+    const isNew = wpm > old && acc >= 75;
+    if (isNew) store.set(pbKey(), wpm);
+    const verdict = isNew
+      ? (old ? `Novo recorde em ${LANGS[lang].nome}, ${modeName()}. Antes era ${old} wpm.` : `Primeiro recorde em ${LANGS[lang].nome}, ${modeName()}.`)
+      : (acc < 75 && wpm > old ? "Recorde não salvo: a precisão precisa ser de pelo menos 75%." : old ? `Seu recorde aqui é ${old} wpm.` : "");
+
+    results.innerHTML = `
+      <div class="res-top">
+        <div class="res-main"><span class="num">${wpm}</span><span class="unit">wpm</span></div>
+        <div class="res-stats">
+          <div><span>Precisão</span><b>${acc}<small>%</small></b></div>
+          <div><span>Bruto</span><b>${raw} <small>wpm</small></b></div>
+          <div><span>Caracteres</span><b>${ok}<small> / </small><span class="bad">${errKeys}</span></b></div>
+          <div><span>Constância</span><b>${cons}<small>%</small></b></div>
+          <div><span>Tempo</span><b>${Math.round(secs)}<small> s</small></b></div>
+        </div>
+      </div>
+      <div class="chart">${chart(history)}
+        <div class="legend"><span><i></i>wpm</span><span><i class="raw"></i>bruto por segundo</span><span><i class="err"></i>segundo com erro</span></div>
+      </div>
+      <div class="res-foot">
+        <span class="verdict${isNew ? " new" : ""}">${verdict}</span>
+        <div class="btns">
+          <button class="btn" data-act="explain">Entender o código</button>
+          <button class="btn" data-act="restart">Repetir trecho</button>
+          <button class="btn primary" data-act="next">Próximo trecho</button>
+        </div>
+      </div>`;
+    editor.classList.add("done");
+    caret.classList.add("idle");
+    renderExplain();
+    live.innerHTML = `<span>resultado</span>`;
+    showPb();
+  }
+
+  // ---------- o que o código faz ----------
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  function renderExplain() {
+    const list = runSnips.map((i) => SNIPS[lang][i]).filter((s) => s.summary || s.notes.length);
+    if (!list.length) { explainEl.hidden = true; return; }
+    explainEl.innerHTML = `<h2>O que esse código faz</h2>` + list.map(explainSnippet).join("");
+    explainEl.hidden = false;
+  }
+
+  function explainSnippet(s) {
+    const types = tokenize(s.code, LANGS[lang]);
+    const lines = [""];
+    [...s.code].forEach((ch, i) => {
+      if (ch === "\n") lines.push("");
+      else lines[lines.length - 1] += `<span class="t-${types[i]}">${esc(ch)}</span>`;
+    });
+
+    // agrupa as linhas: cada nota cobre um intervalo; o que sobra vira linha sem nota
+    const rows = [];
+    for (let n = 1; n <= lines.length;) {
+      const note = s.notes.find((x) => x.from === n);
+      if (note) { rows.push({ from: n, to: Math.min(note.to, lines.length), text: note.text }); n = note.to + 1; continue; }
+      const next = s.notes.filter((x) => x.from > n).sort((a, b) => a.from - b.from)[0];
+      const to = next ? next.from - 1 : lines.length;
+      rows.push({ from: n, to, text: "" });
+      n = to + 1;
+    }
+
+    return `<article class="ex">
+      <header class="ex-head"><span class="ex-file"><i style="background:${LANGS[lang].dot}"></i>${esc(s.file)}</span>
+        <p>${esc(s.summary)}</p></header>
+      ${rows.map((r) => `<div class="ex-row${r.text ? "" : " quiet"}">
+        <pre class="ex-code">${lines.slice(r.from - 1, r.to).map((l, k) => `<span class="ex-ln"><span class="ex-n">${r.from + k}</span>${l || " "}</span>`).join("")}</pre>
+        ${r.text ? `<p class="ex-note">${esc(r.text)}</p>` : ""}
+      </div>`).join("")}
+    </article>`;
+  }
+
+  function chart(h) {
+    const W = 600, H = 170, P = { l: 30, r: 6, t: 8, b: 22 };
+    const max = Math.max(10, ...h.map((d) => Math.max(d.wpm, d.raw)));
+    const top = Math.ceil(max / 20) * 20;
+    const n = h.length;
+    const x = (i) => P.l + (n === 1 ? (W - P.l - P.r) / 2 : (i / (n - 1)) * (W - P.l - P.r));
+    const y = (v) => P.t + (1 - v / top) * (H - P.t - P.b);
+    const path = (k) => h.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join("");
+    const grid = [0, 0.5, 1].map((f) => {
+      const v = Math.round(top * f);
+      return `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.07)"/>
+              <text x="${P.l - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    }).join("");
+    const step = Math.max(1, Math.ceil(n / 8));
+    const xs = h.map((_, i) => (i % step === 0 || i === n - 1) ? `<text x="${x(i)}" y="${H - 4}" text-anchor="middle">${i + 1}</text>` : "").join("");
+    const errs = h.map((d, i) => d.err ? `<circle cx="${x(i)}" cy="${y(d.wpm)}" r="3.5" fill="#ff6369"/>` : "").join("");
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="wpm ao longo do teste"
+      style="font: 11px var(--mono); fill: #6e6e6e">
+      ${grid}${xs}
+      <path d="${path("raw")}" fill="none" stroke="#4d4d4d" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+      <path d="${path("wpm")}" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      ${errs}</svg>`;
+  }
+
+  // ---------- teclado ----------
+  function focusInput() { inp.focus({ preventScroll: true }); }
+  function resetInput() { inp.value = SENT; inp.setSelectionRange(1, 1); }
+
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") { e.preventDefault(); return restart(); }
+    if (e.key === "Escape") { e.preventDefault(); return newSnippet(); }
+    if (phase === "done") {
+      if (e.key === "Enter") { e.preventDefault(); newSnippet(); }
+      return;
+    }
+    if (e.key === "Enter") { e.preventDefault(); return type("\n"); }
+    if (e.key === "Backspace") { e.preventDefault(); return back(e.ctrlKey || e.altKey || e.metaKey); }
+  });
+  function flush() {
+    const v = inp.value;
+    resetInput();
+    if (!v.startsWith(SENT)) return back(false); // backspace vindo do teclado do celular
+    for (const c of v.slice(SENT.length)) type(c === "\r" ? "\n" : c);
+  }
+  inp.addEventListener("input", (e) => { if (!e.isComposing) flush(); });
+  inp.addEventListener("compositionend", flush);
+  inp.addEventListener("focus", () => editor.classList.remove("blurred"));
+  inp.addEventListener("blur", () => editor.classList.add("blurred"));
+
+  $("#body").addEventListener("mousedown", (e) => { e.preventDefault(); focusInput(); });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement === inp || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest && e.target.closest("button") && (e.key === "Enter" || e.key === " ")) return;
+    if (e.key.length === 1 || e.key === "Tab" || e.key === "Escape") { focusInput(); if (e.key === "Tab" || e.key === "Escape") { e.preventDefault(); e.key === "Tab" ? restart() : newSnippet(); } }
+  });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    if (b.dataset.act === "explain") {
+      explainEl.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      return focusInput();
+    }
+    b.dataset.act === "next" ? newSnippet() : restart();
+    focusInput();
+  });
+  window.addEventListener("resize", () => { if (spans.length) { measure(); place(); } });
+
+  // ---------- início ----------
+  buildConfig();
+  resetInput();
+  newSnippet();
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { measure(); place(); });
+  focusInput();
+})();
+</script>
+</body>
+</html>
