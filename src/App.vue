@@ -15,7 +15,6 @@ const lerOpcao = (chave, lista, padrao) => {
 const categoria = ref(lerOpcao('ct:lang', CATEGORIAS, 'meus'))
 const modo = ref(lerOpcao('ct:mode', MODOS, 'trecho'))
 
-// reactive() "desembrulha" os refs de dentro: teste.pos em vez de teste.pos.value
 const teste = reactive(useTeste(categoria, modo))
 teste.outroTrecho()
 
@@ -46,7 +45,6 @@ async function explicar() {
   focar()
 }
 
-// Qualquer tecla fora do editor volta o foco para ele
 function teclaGlobal(e) {
   if (e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return
   if (e.target.closest?.('button') && (e.key === 'Enter' || e.key === ' ')) return

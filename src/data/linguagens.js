@@ -4,7 +4,6 @@ const PY_KW = 'def class return if elif else for while in not and or is None Tru
 const SQL_KW = 'SELECT FROM WHERE JOIN INNER LEFT RIGHT ON AS GROUP BY ORDER HAVING LIMIT DESC ASC AND OR NOT NULL CREATE TABLE PRIMARY KEY DEFAULT INSERT INTO VALUES UPDATE SET RETURNING WITH INDEX CONFLICT DO NOTHING SERIAL TEXT NUMERIC VARCHAR TIMESTAMP DELETE'
 const palavras = (texto) => new Set(texto.split(' '))
 
-// Regras de cor de cada linguagem, usadas pelo lib/sintaxe.js
 export const LINGUAGENS = {
   js: { nome: 'JavaScript', cor: '#f7df1e', kw: palavras(JS_KW), linha: '//', bloco: true },
   ts: { nome: 'TypeScript', cor: '#3b82f6', kw: palavras(TS_KW), linha: '//', bloco: true },
@@ -33,7 +32,6 @@ export const MODOS = [
   { id: '120', nome: '120 s' },
 ]
 
-// A linguagem de cada trecho vem da extensão do arquivo
 export function linguagemDoArquivo(arquivo, padrao) {
   const extensao = arquivo.split('.').pop()
   return LINGUAGENS[extensao] ? extensao : padrao

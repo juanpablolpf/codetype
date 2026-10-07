@@ -1,6 +1,5 @@
 import { linguagemDoArquivo } from './linguagens'
 
-// O "?raw" do Vite importa o arquivo como texto puro.
 import meus from './trechos/meus.txt?raw'
 import js from './trechos/js.txt?raw'
 import ts from './trechos/ts.txt?raw'

@@ -8,8 +8,6 @@ const props = defineProps({
   descricao: { type: String, required: true },
 })
 
-// defineEmits lista os eventos que o pai pode escutar (@explicar, @repetir...).
-// No React, o pai passaria funções como props (onExplicar, onRepetir...).
 defineEmits(['explicar', 'repetir', 'proximo'])
 
 const veredito = computed(() => {

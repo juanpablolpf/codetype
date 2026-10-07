@@ -1,9 +1,6 @@
 <script setup>
 import { CATEGORIAS, MODOS } from '../data/linguagens'
 
-// defineModel cria um v-model no componente: o pai escreve
-// <SeletorConfig v-model:categoria="x" v-model:modo="y" /> e os dois lados ficam ligados.
-// (No React seriam duas props, value e onChange, para cada um.)
 const categoria = defineModel('categoria', { required: true })
 const modo = defineModel('modo', { required: true })
 </script>

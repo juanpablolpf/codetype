@@ -4,9 +4,6 @@ import { LINGUAGENS, CATEGORIAS, MODOS } from '../data/linguagens'
 import { colorir } from '../lib/sintaxe'
 import { armazenamento } from '../lib/armazenamento'
 
-// Toda a lógica do teste de digitação. Os componentes só mostram o estado
-// e chamam digitar/apagar/reiniciar/outroTrecho.
-// (No React, isso seria um custom hook com vários useState e useRef.)
 export function useTeste(categoria, modo) {
   const indice = ref(-1)
   const usados = ref([]) // trechos que apareceram nesta rodada (para a explicação)

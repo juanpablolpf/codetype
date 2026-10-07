@@ -1,8 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
-// "teste" é o objeto do useTeste (embrulhado em reactive no App.vue,
-// por isso aqui dá para ler teste.pos sem .value).
 const props = defineProps({
   teste: { type: Object, required: true },
   modo: { type: String, required: true },
@@ -15,8 +13,7 @@ const focado = ref(false)
 
 const fim = computed(() => props.teste.fase === 'fim')
 
-// ---------- linhas, rolagem e cursor ----------
-const lh = ref(31) // altura de uma linha em px, medida do CSS
+const lh = ref(31)
 const maxLinhas = ref(11)
 const cursorX = ref(0)
 
@@ -71,10 +68,8 @@ function medir() {
   posicionar()
 }
 
-// flush: 'post' roda depois que o Vue atualizou o DOM (os spans já existem)
 watch(() => [props.teste.pos, props.teste.chars], posicionar, { flush: 'post' })
 
-// ---------- teclado ----------
 // A textarea fica invisível e recebe as teclas. Ela sempre guarda um espaço
 // (a "sentinela"): se ele some, o teclado do celular apagou algo (backspace).
 const SENTINELA = ' '
