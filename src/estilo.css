@@ -1,26 +1,24 @@
 :root {
-  --bg: #000;
-  --fg: #ededed;
-  --muted: #a1a1a1;
-  --faint: #6e6e6e;
-  --pending: #565656;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --panel: rgba(255, 255, 255, 0.025);
-  --err: #ff6369;
+  --fundo: #000;
+  --texto: #ededed;
+  --apagado: #a1a1a1;
+  --discreto: #6e6e6e;
+  --pendente: #565656;
+  --linha: rgba(255, 255, 255, 0.08);
+  --linha-forte: rgba(255, 255, 255, 0.14);
+  --painel: rgba(255, 255, 255, 0.025);
+  --erro: #ff6369;
 
-  /* cores que o código ganha conforme você digita */
-  --kw: #ff8fc0;
-  --st: #7fe0b6;
-  --fn: #8cb8ff;
-  --nu: #ffc488;
-  --cm: #767676;
-  --tg: #ff8fc0;
-  --at: #c8a8ff;
-  --ty: #7fd5e6;
-  --pr: #d9d9d9;
-  --pu: #9b9b9b;
-  --tx: #ededed;
+  --cor-chave: #ff8fc0;
+  --cor-texto: #7fe0b6;
+  --cor-funcao: #8cb8ff;
+  --cor-numero: #ffc488;
+  --cor-comentario: #767676;
+  --cor-atributo: #c8a8ff;
+  --cor-tipo: #7fd5e6;
+  --cor-propriedade: #d9d9d9;
+  --cor-pontuacao: #9b9b9b;
+  --cor-nome: #ededed;
 
   --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -31,10 +29,10 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--fundo);
   background-image: radial-gradient(ellipse 70% 45% at 50% -12%, rgba(255, 255, 255, 0.09), transparent 70%);
   background-repeat: no-repeat;
-  color: var(--fg);
+  color: var(--texto);
   font-family: var(--sans);
   font-size: 15px;
   line-height: 1.5;
@@ -43,36 +41,41 @@ body {
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-.wrap { width: min(100% - 32px, 980px); margin-inline: auto; }
+.pagina { width: min(100% - 32px, 980px); margin-inline: auto; }
 
-/* cartão base do editor, resultado e explicação */
 .cartao {
-  border: 1px solid var(--line);
+  border: 1px solid var(--linha);
   border-radius: 14px;
-  background: var(--panel);
+  background: var(--painel);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
-.btn {
+.botao {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
   padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 500;
-  border: 1px solid var(--line-strong); background: transparent; color: var(--fg);
+  border: 1px solid var(--linha-forte); background: transparent; color: var(--texto);
   transition: background-color 0.15s, opacity 0.15s;
 }
-.btn:hover { background: rgba(255, 255, 255, 0.06); }
-.btn.primario { background: #fff; color: #000; border-color: #fff; }
-.btn.primario:hover { opacity: 0.88; background: #fff; }
-.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.botao:hover { background: rgba(255, 255, 255, 0.06); }
+.botao.primario { background: #fff; color: #000; border-color: #fff; }
+.botao.primario:hover { opacity: 0.88; }
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; }
 
 kbd {
-  font-family: var(--mono); font-size: 11.5px; color: var(--muted);
-  border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--apagado);
+  border: 1px solid var(--linha-forte); border-bottom-width: 2px; border-radius: 5px;
   padding: 1px 6px; margin-right: 6px; background: rgba(255, 255, 255, 0.03);
 }
 
-/* tipo de cada caractere → cor (usado no editor e na explicação) */
-.t-kw { --tc: var(--kw); } .t-st { --tc: var(--st); } .t-fn { --tc: var(--fn); }
-.t-nu { --tc: var(--nu); } .t-cm { --tc: var(--cm); } .t-tg { --tc: var(--tg); }
-.t-at { --tc: var(--at); } .t-ty { --tc: var(--ty); } .t-pr { --tc: var(--pr); }
-.t-pu { --tc: var(--pu); } .t-tx { --tc: var(--tx); }
+/* tipo de cada caractere → cor; usado no editor e na explicação */
+.t-chave, .t-tag { --cor-token: var(--cor-chave); }
+.t-texto { --cor-token: var(--cor-texto); }
+.t-funcao { --cor-token: var(--cor-funcao); }
+.t-numero { --cor-token: var(--cor-numero); }
+.t-comentario { --cor-token: var(--cor-comentario); }
+.t-atributo { --cor-token: var(--cor-atributo); }
+.t-tipo { --cor-token: var(--cor-tipo); }
+.t-propriedade { --cor-token: var(--cor-propriedade); }
+.t-pontuacao { --cor-token: var(--cor-pontuacao); }
+.t-nome { --cor-token: var(--cor-nome); }

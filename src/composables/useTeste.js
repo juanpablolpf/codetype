@@ -1,74 +1,69 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { TRECHOS } from '../data/trechos'
 import { LINGUAGENS, CATEGORIAS, MODOS } from '../data/linguagens'
 import { colorir } from '../lib/sintaxe'
 import { armazenamento } from '../lib/armazenamento'
 
+// 1 palavra = 5 caracteres, a convenção dos testes de digitação
+const calcularWpm = (caracteres, segundos) => caracteres / 5 / (segundos / 60)
+
 export function useTeste(categoria, modo) {
   const indice = ref(-1)
-  const usados = ref([]) // trechos que apareceram nesta rodada (para a explicação)
-  const chars = ref([]) // { ch, tipo, st } — st: '' | 'ok' | 'err' | 'auto'
-  const pos = ref(0)
+  const usadosNaRodada = ref([])
+  const letras = ref([]) // { letra, tipo, estado }, estado: '' | 'ok' | 'erro' | 'auto'
+  const posicao = ref(0)
   const fase = ref('parado') // parado | digitando | fim
   const historico = ref([]) // um ponto por segundo: { wpm, bruto, erros }
   const resultado = ref(null)
-  const agora = ref(0) // muda a cada segundo, para o wpm ao vivo recalcular
-  const versaoRecorde = ref(0)
+  const recorde = ref(0)
 
-  // Contadores que não aparecem na tela não precisam ser reativos.
   let inicio = 0, relogio = 0, acertosAnteriores = 0
   let teclas = 0, teclasCertas = 0, erros = 0, teclasNoSegundo = 0, errosNoSegundo = 0
 
   const lista = computed(() => TRECHOS[categoria.value])
   const trecho = computed(() => lista.value[indice.value])
   const linguagem = computed(() => LINGUAGENS[trecho.value.linguagem])
-  const trechosDaRodada = computed(() => usados.value.map((i) => lista.value[i]))
-  const acertos = computed(() => chars.value.reduce((n, c) => n + (c.st === 'ok'), 0))
+  const trechosDaRodada = computed(() => usadosNaRodada.value.map((i) => lista.value[i]))
+  const acertos = computed(() => letras.value.filter((l) => l.estado === 'ok').length)
 
-  const segundos = () => (performance.now() - inicio) / 1000
-  const ppm = (caracteres, s) => caracteres / 5 / (s / 60) // 5 caracteres = 1 palavra
-
-  const wpmAoVivo = computed(() => {
-    agora.value // dependência: recalcula a cada segundo
-    if (fase.value !== 'digitando') return 0
-    return Math.round(ppm(acertosAnteriores + acertos.value, Math.max(segundos(), 1)))
-  })
-  const progresso = computed(() => Math.round((pos.value / (chars.value.length || 1)) * 100))
+  const wpmAoVivo = computed(() =>
+    Math.round(calcularWpm(acertosAnteriores + acertos.value, Math.max(historico.value.length, 1))),
+  )
+  const progresso = computed(() => Math.round((posicao.value / letras.value.length) * 100))
   const restante = computed(() => Math.max(0, +modo.value - historico.value.length))
 
   const chaveRecorde = computed(() => `ct:pb:${categoria.value}:${modo.value}`)
-  const recorde = computed(() => {
-    versaoRecorde.value
-    return +armazenamento.ler(chaveRecorde.value, 0)
-  })
+  watch(chaveRecorde, (chave) => { recorde.value = +armazenamento.ler(chave, 0) }, { immediate: true })
+
   const descricao = computed(() => {
-    const cat = CATEGORIAS.find((c) => c.id === categoria.value).nome
-    const md = MODOS.find((m) => m.id === modo.value).nome.toLowerCase()
-    return `${cat}, ${md}`
+    const nomeCategoria = CATEGORIAS.find((c) => c.id === categoria.value).nome
+    const nomeModo = MODOS.find((m) => m.id === modo.value).nome.toLowerCase()
+    return `${nomeCategoria}, ${nomeModo}`
   })
 
   function sortear() {
-    let i = Math.floor(Math.random() * lista.value.length)
-    if (lista.value.length > 1 && i === indice.value) i = (i + 1) % lista.value.length
+    const total = lista.value.length
+    let i = Math.floor(Math.random() * total)
+    if (total > 1 && i === indice.value) i = (i + 1) % total
     indice.value = i
   }
 
   function montar() {
-    const t = trecho.value
-    if (!usados.value.includes(indice.value)) usados.value.push(indice.value)
-    const tipos = colorir(t.codigo, LINGUAGENS[t.linguagem])
-    chars.value = [...t.codigo].map((ch, i) => ({ ch, tipo: tipos[i], st: '' }))
-    pos.value = 0
+    const { codigo, linguagem: id } = trecho.value
+    if (!usadosNaRodada.value.includes(indice.value)) usadosNaRodada.value.push(indice.value)
+    const tipos = colorir(codigo, LINGUAGENS[id])
+    letras.value = [...codigo].map((letra, i) => ({ letra, tipo: tipos[i], estado: '' }))
+    posicao.value = 0
     pularIndentacao()
   }
 
-  // Depois de uma quebra de linha, os espaços do começo da linha seguinte entram sozinhos
+  // A indentação não conta como digitação: entra sozinha depois de cada quebra de linha
   function pularIndentacao() {
-    const c = chars.value
-    if (pos.value !== 0 && c[pos.value - 1].ch !== '\n') return
-    while (pos.value < c.length && c[pos.value].ch === ' ') {
-      c[pos.value].st = 'auto'
-      pos.value++
+    const l = letras.value
+    if (posicao.value !== 0 && l[posicao.value - 1].letra !== '\n') return
+    while (posicao.value < l.length && l[posicao.value].letra === ' ') {
+      l[posicao.value].estado = 'auto'
+      posicao.value++
     }
   }
 
@@ -76,60 +71,57 @@ export function useTeste(categoria, modo) {
     clearInterval(relogio)
     fase.value = 'parado'
     historico.value = []
-    usados.value = []
+    usadosNaRodada.value = []
     resultado.value = null
     acertosAnteriores = teclas = teclasCertas = erros = teclasNoSegundo = errosNoSegundo = 0
   }
 
   function reiniciar() {
-    if (indice.value < 0) sortear()
     zerar()
     montar()
   }
 
   function outroTrecho() {
     sortear()
-    zerar()
-    montar()
+    reiniciar()
   }
 
   function comecar() {
     fase.value = 'digitando'
     inicio = performance.now()
-    relogio = setInterval(aCadaSegundo, 1000)
+    relogio = setInterval(registrarSegundo, 1000)
   }
 
-  function aCadaSegundo() {
-    const s = historico.value.length + 1
+  function registrarSegundo() {
+    const segundo = historico.value.length + 1
     historico.value.push({
-      wpm: ppm(acertosAnteriores + acertos.value, s),
+      wpm: calcularWpm(acertosAnteriores + acertos.value, segundo),
       bruto: teclasNoSegundo * 12,
       erros: errosNoSegundo,
     })
     teclasNoSegundo = errosNoSegundo = 0
-    agora.value++
-    if (modo.value !== 'trecho' && s >= +modo.value) terminar()
+    if (modo.value !== 'trecho' && segundo >= +modo.value) terminar()
   }
 
   function digitar(tecla) {
-    if (fase.value === 'fim' || pos.value >= chars.value.length) return
+    if (fase.value === 'fim') return
     if (fase.value === 'parado') comecar()
 
-    const atual = chars.value[pos.value]
+    const atual = letras.value[posicao.value]
     teclas++
     teclasNoSegundo++
-    if (tecla === atual.ch) {
-      atual.st = 'ok'
+    if (tecla === atual.letra) {
+      atual.estado = 'ok'
       teclasCertas++
     } else {
-      atual.st = 'err'
+      atual.estado = 'erro'
       erros++
       errosNoSegundo++
     }
-    pos.value++
-    if (atual.ch === '\n') pularIndentacao()
+    posicao.value++
+    if (atual.letra === '\n') pularIndentacao()
 
-    if (pos.value >= chars.value.length) {
+    if (posicao.value === letras.value.length) {
       if (modo.value === 'trecho') return terminar()
       // no modo de tempo, o próximo trecho entra sem parar o relógio
       acertosAnteriores += acertos.value
@@ -138,39 +130,35 @@ export function useTeste(categoria, modo) {
     }
   }
 
-  function apagarUm() {
-    const c = chars.value
-    if (pos.value === 0) return false
-    let p = pos.value - 1
-    while (p > 0 && c[p].st === 'auto') p--
-    if (c[p].st === 'auto') return false // só tem indentação antes: nada a apagar
-    for (let i = p; i < pos.value; i++) c[i].st = ''
-    pos.value = p
+  function apagarUma() {
+    const l = letras.value
+    let p = posicao.value - 1
+    while (p > 0 && l[p].estado === 'auto') p--
+    if (p < 0 || l[p].estado === 'auto') return false // antes só tem indentação
+    for (let i = p; i < posicao.value; i++) l[i].estado = ''
+    posicao.value = p
     return true
   }
 
-  function apagar(palavraInteira = false) {
-    if (fase.value !== 'digitando' || !apagarUm() || !palavraInteira) return
-    const c = chars.value
-    const ehPalavra = (ch) => /[\w$]/.test(ch)
-    const eraPalavra = ehPalavra(c[pos.value].ch)
-    while (
-      pos.value > 0 &&
-      c[pos.value - 1].ch !== '\n' &&
-      (eraPalavra ? ehPalavra(c[pos.value - 1].ch) : c[pos.value - 1].ch === ' ')
-    ) apagarUm()
+  function apagar(palavraInteira) {
+    if (fase.value !== 'digitando' || !apagarUma() || !palavraInteira) return
+    const l = letras.value
+    const ehPalavra = (letra) => /[\w$]/.test(letra)
+    const apagouPalavra = ehPalavra(l[posicao.value].letra)
+    const continua = (letra) => (apagouPalavra ? ehPalavra(letra) : letra === ' ')
+    while (posicao.value > 0 && l[posicao.value - 1].letra !== '\n' && continua(l[posicao.value - 1].letra)) apagarUma()
   }
 
   function terminar() {
     clearInterval(relogio)
-    const tempo = modo.value === 'trecho' ? Math.max(segundos(), 0.5) : +modo.value
+    const tempo = modo.value === 'trecho' ? Math.max((performance.now() - inicio) / 1000, 0.5) : +modo.value
 
-    // no modo trecho, o último pedaço de segundo também entra no gráfico
+    // no modo trecho o teste acaba no meio de um segundo; esse pedaço também entra no gráfico
     if (modo.value === 'trecho') {
       const resto = tempo - historico.value.length
       if (resto > 0.2 || !historico.value.length) {
         historico.value.push({
-          wpm: ppm(acertosAnteriores + acertos.value, tempo),
+          wpm: calcularWpm(acertosAnteriores + acertos.value, tempo),
           bruto: (teclasNoSegundo * 12) / Math.max(resto, 0.2),
           erros: errosNoSegundo,
         })
@@ -178,26 +166,26 @@ export function useTeste(categoria, modo) {
     }
 
     const certos = acertosAnteriores + acertos.value
-    const wpm = Math.round(ppm(certos, tempo))
-    const precisao = teclas ? Math.floor((teclasCertas / teclas) * 100) : 0
+    const wpm = Math.round(calcularWpm(certos, tempo))
+    const precisao = Math.floor((teclasCertas / teclas) * 100)
     const brutos = historico.value.map((h) => h.bruto)
-    const media = brutos.reduce((a, b) => a + b, 0) / (brutos.length || 1)
-    const desvio = Math.sqrt(brutos.reduce((a, b) => a + (b - media) ** 2, 0) / (brutos.length || 1))
+    const media = brutos.reduce((a, b) => a + b, 0) / brutos.length
+    const desvio = Math.sqrt(brutos.reduce((a, b) => a + (b - media) ** 2, 0) / brutos.length)
 
     const anterior = recorde.value
     const novoRecorde = wpm > anterior && precisao >= 75
     if (novoRecorde) {
       armazenamento.salvar(chaveRecorde.value, wpm)
-      versaoRecorde.value++
+      recorde.value = wpm
     }
 
     resultado.value = {
       wpm,
-      bruto: Math.round(ppm(teclas, tempo)),
+      bruto: Math.round(calcularWpm(teclas, tempo)),
       precisao,
       certos,
       erros,
-      constancia: media ? Math.max(0, Math.round(100 * (1 - desvio / media))) : 0,
+      constancia: Math.max(0, Math.round(100 * (1 - desvio / media))),
       tempo: Math.round(tempo),
       anterior,
       novoRecorde,
@@ -209,7 +197,7 @@ export function useTeste(categoria, modo) {
   onUnmounted(() => clearInterval(relogio))
 
   return {
-    chars, pos, fase, trecho, linguagem, historico, resultado, trechosDaRodada,
+    letras, posicao, fase, trecho, linguagem, historico, resultado, trechosDaRodada,
     wpmAoVivo, progresso, restante, recorde, descricao,
     digitar, apagar, reiniciar, outroTrecho,
   }

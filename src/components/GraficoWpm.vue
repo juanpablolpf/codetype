@@ -52,10 +52,10 @@ const rotulosX = computed(() =>
 <style scoped>
 .grafico { margin-top: 28px; }
 svg { display: block; width: 100%; height: 170px; overflow: visible; font: 11px var(--mono); fill: #6e6e6e; }
-.legenda { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12px; color: var(--apagado); }
 .legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .legenda i { width: 14px; height: 2px; background: #fff; }
 .legenda i.bruto { background: #4d4d4d; }
-.legenda i.erro { width: 6px; height: 6px; border-radius: 50%; background: var(--err); }
+.legenda i.erro { width: 6px; height: 6px; border-radius: 50%; background: var(--erro); }
 @media (max-width: 640px) { svg { height: 130px; } }
 </style>

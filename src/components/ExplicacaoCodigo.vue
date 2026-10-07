@@ -14,10 +14,11 @@ const blocos = computed(() =>
     .filter((t) => t.resumo || t.notas.length)
     .map((t) => {
       const tipos = colorir(t.codigo, LINGUAGENS[t.linguagem])
-      const linhas = [[]]
-      ;[...t.codigo].forEach((ch, i) => {
-        if (ch === '\n') linhas.push([])
-        else linhas.at(-1).push({ ch, tipo: tipos[i] })
+      let i = 0
+      const linhas = t.codigo.split('\n').map((texto) => {
+        const linha = [...texto].map((letra) => ({ letra, tipo: tipos[i++] }))
+        i++ // pula o "\n", que também tem um tipo
+        return linha
       })
 
       const grupos = []
@@ -48,7 +49,7 @@ const blocos = computed(() =>
         <p>{{ b.resumo }}</p>
       </header>
       <div v-for="g in b.grupos" :key="g.de" class="grupo" :class="{ quieto: !g.texto }">
-        <pre class="codigo"><span v-for="(linha, k) in g.linhas" :key="k" class="linha"><span class="num">{{ g.de + k }}</span><span v-for="(c, j) in linha" :key="j" :class="`t-${c.tipo}`">{{ c.ch }}</span>{{ linha.length ? '' : ' ' }}</span></pre>
+        <pre class="codigo"><span v-for="(linha, k) in g.linhas" :key="k" class="linha"><span class="num">{{ g.de + k }}</span><span v-for="(c, j) in linha" :key="j" :class="`t-${c.tipo}`">{{ c.letra }}</span>{{ linha.length ? '' : ' ' }}</span></pre>
         <p v-if="g.texto" class="nota">{{ g.texto }}</p>
       </div>
     </article>
@@ -59,14 +60,14 @@ const blocos = computed(() =>
 .explicacao { margin-top: 20px; scroll-margin-top: 20px; }
 h2 { margin: 0 0 14px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
 .cartao + .cartao { margin-top: 14px; }
-header { padding: 18px 22px 16px; border-bottom: 1px solid var(--line); }
+header { padding: 18px 22px 16px; border-bottom: 1px solid var(--linha); }
 .arquivo { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 13px; }
 .arquivo i { width: 7px; height: 7px; border-radius: 50%; }
-header p { margin: 8px 0 0; color: var(--muted); max-width: 70ch; }
+header p { margin: 8px 0 0; color: var(--apagado); max-width: 70ch; }
 
 .grupo {
   display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px;
-  padding: 12px 22px; border-top: 1px solid var(--line);
+  padding: 12px 22px; border-top: 1px solid var(--linha);
   transition: background-color 0.15s;
 }
 header + .grupo { border-top: 0; }
@@ -80,7 +81,7 @@ header + .grupo { border-top: 0; }
 }
 .linha { display: block; }
 .num { display: inline-block; width: 3ch; margin-right: 12px; text-align: right; color: #3d3d3d; user-select: none; }
-.codigo [class^="t-"] { color: var(--tc); }
+.codigo [class^="t-"] { color: var(--cor-token); }
 .nota { margin: 0; padding-top: 2px; font-size: 14px; line-height: 1.6; color: #c9c9c9; }
 
 @media (max-width: 640px) {

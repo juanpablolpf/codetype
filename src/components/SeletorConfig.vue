@@ -7,7 +7,7 @@ const modo = defineModel('modo', { required: true })
 
 <template>
   <div class="config">
-    <div class="seg" role="group" aria-label="Linguagem">
+    <div class="grupo" role="group" aria-label="Linguagem">
       <button
         v-for="c in CATEGORIAS"
         :key="c.id"
@@ -16,7 +16,7 @@ const modo = defineModel('modo', { required: true })
         @click="categoria = c.id"
       >{{ c.nome }}</button>
     </div>
-    <div class="seg" role="group" aria-label="Modo">
+    <div class="grupo" role="group" aria-label="Modo">
       <button
         v-for="m in MODOS"
         :key="m.id"
@@ -30,17 +30,17 @@ const modo = defineModel('modo', { required: true })
 
 <style scoped>
 .config { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-.seg {
+.grupo {
   display: inline-flex; padding: 3px; gap: 2px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--panel);
+  border: 1px solid var(--linha); border-radius: 999px; background: var(--painel);
 }
-.seg button {
+.grupo button {
   border: 0; background: transparent; cursor: pointer; white-space: nowrap;
-  padding: 6px 13px; border-radius: 999px; font-size: 13px; color: var(--muted);
+  padding: 6px 13px; border-radius: 999px; font-size: 13px; color: var(--apagado);
   transition: background-color 0.15s, color 0.15s;
 }
-.seg button:hover { color: var(--fg); }
-.seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
+.grupo button:hover { color: var(--texto); }
+.grupo button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.1); color: var(--texto); }
 
 @media (max-width: 640px) {
   .config {
@@ -48,6 +48,6 @@ const modo = defineModel('modo', { required: true })
     margin-inline: -16px; padding-inline: 16px;
   }
   .config::-webkit-scrollbar { display: none; }
-  .seg { flex: none; }
+  .grupo { flex: none; }
 }
 </style>

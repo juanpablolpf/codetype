@@ -1,20 +1,20 @@
-const JS_KW = 'const let var function return if else for while do async await import export from default new class extends try catch finally throw typeof instanceof in of null undefined true false this super switch case break continue yield delete void'
-const TS_KW = JS_KW + ' type interface enum implements private public protected readonly as keyof string number boolean any unknown never'
-const PY_KW = 'def class return if elif else for while in not and or is None True False import from as with try except finally raise lambda pass yield global async await self'
-const SQL_KW = 'SELECT FROM WHERE JOIN INNER LEFT RIGHT ON AS GROUP BY ORDER HAVING LIMIT DESC ASC AND OR NOT NULL CREATE TABLE PRIMARY KEY DEFAULT INSERT INTO VALUES UPDATE SET RETURNING WITH INDEX CONFLICT DO NOTHING SERIAL TEXT NUMERIC VARCHAR TIMESTAMP DELETE'
-const palavras = (texto) => new Set(texto.split(' '))
+const JS = 'const let var function return if else for while do async await import export from default new class extends try catch finally throw typeof instanceof in of null undefined true false this super switch case break continue yield delete void'
+const TS = JS + ' type interface enum implements private public protected readonly as keyof string number boolean any unknown never'
+const PY = 'def class return if elif else for while in not and or is None True False import from as with try except finally raise lambda pass yield global async await self'
+const SQL = 'SELECT FROM WHERE JOIN INNER LEFT RIGHT ON AS GROUP BY ORDER HAVING LIMIT DESC ASC AND OR NOT NULL CREATE TABLE PRIMARY KEY DEFAULT INSERT INTO VALUES UPDATE SET RETURNING WITH INDEX CONFLICT DO NOTHING SERIAL TEXT NUMERIC VARCHAR TIMESTAMP DELETE'
+const conjunto = (texto) => new Set(texto.split(' '))
 
 export const LINGUAGENS = {
-  js: { nome: 'JavaScript', cor: '#f7df1e', kw: palavras(JS_KW), linha: '//', bloco: true },
-  ts: { nome: 'TypeScript', cor: '#3b82f6', kw: palavras(TS_KW), linha: '//', bloco: true },
-  tsx: { nome: 'React', cor: '#61dafb', kw: palavras(TS_KW), linha: '//', bloco: true, markup: true },
-  vue: { nome: 'Vue', cor: '#42b883', kw: palavras(JS_KW), linha: '//', bloco: true, markup: true },
-  py: { nome: 'Python', cor: '#ffd43b', kw: palavras(PY_KW), linha: '#', decorator: true },
-  sql: { nome: 'SQL', cor: '#c8a8ff', kw: palavras(SQL_KW), linha: '--', maiusculas: true },
-  css: { nome: 'CSS', cor: '#ff8fc0', kw: new Set(), bloco: true, css: true },
+  js: { cor: '#f7df1e', palavrasChave: conjunto(JS), comentarioLinha: '//', comentarioBloco: true },
+  ts: { cor: '#3b82f6', palavrasChave: conjunto(TS), comentarioLinha: '//', comentarioBloco: true },
+  tsx: { cor: '#61dafb', palavrasChave: conjunto(TS), comentarioLinha: '//', comentarioBloco: true, tags: true },
+  vue: { cor: '#42b883', palavrasChave: conjunto(JS), comentarioLinha: '//', comentarioBloco: true, tags: true },
+  py: { cor: '#ffd43b', palavrasChave: conjunto(PY), comentarioLinha: '#', decoradores: true },
+  sql: { cor: '#c8a8ff', palavrasChave: conjunto(SQL), comentarioLinha: '--', ignoraMaiusculas: true },
+  css: { cor: '#ff8fc0', palavrasChave: new Set(), comentarioBloco: true, css: true },
 }
 
-// As abas de cima. "meus" junta trechos dos seus projetos, de várias linguagens.
+// "meus" mistura linguagens: em cada trecho, a cor vem da extensão do arquivo
 export const CATEGORIAS = [
   { id: 'meus', nome: 'Meus projetos' },
   { id: 'js', nome: 'JavaScript' },

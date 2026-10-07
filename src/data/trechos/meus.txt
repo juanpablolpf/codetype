@@ -248,7 +248,7 @@ export function useProspeccoes() {
 
   return { prospeccoes, mudarEtapa, remover }
 }
-%% O composable do seu funil de prospecção no aprendendo-vue (versão resumida): guarda a lista, salva sozinho e muda a etapa de cada negócio.
+%% O composable do meu funil de prospecção no aprendendo-vue (versão resumida): guarda a lista, salva sozinho e muda a etapa de cada negócio.
 1: Um composable é o custom hook do Vue: uma função que guarda estado e devolve o que o componente precisa.
 2: A lista começa com o que estava salvo, porque a função carregar lê o localStorage.
 4-10: Sempre que a lista mudar, salva de novo. É como um useEffect com a lista nas dependências, e o deep: true pega até mudança dentro de um item.
@@ -294,7 +294,7 @@ const fraseAbertas = computed(() => {
 <template>
   <h1 class="resumo">{{ fraseAbertas }}</h1>
 </template>
-%% O título do seu funil no aprendendo-vue, que muda a frase conforme a lista (versão resumida).
+%% O título do meu funil no aprendendo-vue, que muda a frase conforme a lista (versão resumida).
 1-2: Script setup e o computed.
 4-6: O defineProps declara o que o componente recebe do pai: aqui, a lista abertas, que é obrigatória. São as props do React, só que declaradas com tipo.
 8: O computed recalcula a frase sozinho quando a lista muda.

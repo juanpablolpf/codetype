@@ -39,10 +39,10 @@ const veredito = computed(() => {
 
     <div class="rodape">
       <span class="veredito" :class="{ novo: resultado.novoRecorde }">{{ veredito }}</span>
-      <div class="btns">
-        <button class="btn" type="button" @click="$emit('explicar')">Entender o código</button>
-        <button class="btn" type="button" @click="$emit('repetir')">Repetir trecho</button>
-        <button class="btn primario" type="button" @click="$emit('proximo')">Próximo trecho</button>
+      <div class="botoes">
+        <button class="botao" type="button" @click="$emit('explicar')">Entender o código</button>
+        <button class="botao" type="button" @click="$emit('repetir')">Repetir trecho</button>
+        <button class="botao primario" type="button" @click="$emit('proximo')">Próximo trecho</button>
       </div>
     </div>
   </div>
@@ -53,22 +53,22 @@ const veredito = computed(() => {
 .topo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 28px 44px; }
 .principal { line-height: 1; }
 .numero { font-size: clamp(64px, 11vw, 96px); font-weight: 600; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
-.unidade { font-size: 15px; color: var(--muted); margin-left: 6px; }
+.unidade { font-size: 15px; color: var(--apagado); margin-left: 6px; }
 .numeros {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 18px 28px; flex: 1; min-width: 260px; padding-bottom: 8px;
 }
 .numeros div { display: flex; flex-direction: column; gap: 2px; }
-.numeros span { font-size: 13px; color: var(--muted); }
+.numeros span { font-size: 13px; color: var(--apagado); }
 .numeros b { font-family: var(--mono); font-weight: 500; font-size: 20px; }
-.numeros small { font-size: 13px; color: var(--muted); font-weight: 400; }
-.numeros em { font-style: normal; color: var(--err); }
+.numeros small { font-size: 13px; color: var(--apagado); font-weight: 400; }
+.numeros em { font-style: normal; color: var(--erro); }
 .rodape {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
-  margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line);
+  margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--linha);
 }
-.veredito { color: var(--muted); font-size: 14px; }
-.veredito.novo { color: var(--fg); }
+.veredito { color: var(--apagado); font-size: 14px; }
+.veredito.novo { color: var(--texto); }
 @media (max-width: 640px) {
   .resultado { padding: 22px 18px 20px; }
 }

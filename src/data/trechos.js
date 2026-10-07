@@ -15,22 +15,23 @@ import css from './trechos/css.txt?raw'
 //   1: O que a linha 1 faz.
 //   3-5: O que as linhas 3 a 5 fazem.
 function lerTrechos(texto, categoria) {
-  return texto.split(/^@@ /m).filter((bloco) => bloco.trim()).map((bloco) => {
+  // no Windows o git pode trazer os .txt com \r\n
+  return texto.replace(/\r\n/g, '\n').split(/^@@ /m).filter((bloco) => bloco.trim()).map((bloco) => {
     const quebra = bloco.indexOf('\n')
     const arquivo = bloco.slice(0, quebra).trim()
-    const [bruto, extra = ''] = bloco.slice(quebra + 1).split(/^%% ?/m)
+    const [parteCodigo, parteExplicacao = ''] = bloco.slice(quebra + 1).split(/^%% ?/m)
 
-    const codigo = bruto
+    const codigo = parteCodigo
       .split('\n')
       .map((linha) => linha.replace(/\s+$/, ''))
       .join('\n')
       .replace(/^\n+|\n+$/g, '')
 
-    const [resumo = '', ...linhas] = extra.trim().split('\n')
-    const notas = linhas
+    const [resumo = '', ...linhasDeNota] = parteExplicacao.trim().split('\n')
+    const notas = linhasDeNota
       .map((linha) => linha.match(/^(\d+)(?:-(\d+))?:\s*(.+)$/))
       .filter(Boolean)
-      .map((m) => ({ de: +m[1], ate: +(m[2] || m[1]), texto: m[3] }))
+      .map(([, de, ate, texto]) => ({ de: +de, ate: +(ate || de), texto }))
 
     return {
       arquivo,

@@ -1,67 +1,62 @@
-// Um colorizador de sintaxe pequeno: devolve um tipo para cada caractere
-// (kw = palavra-chave, st = texto, fn = função, nu = número, cm = comentário,
-// tg = tag, at = atributo, ty = tipo/classe, pr = propriedade, pu = pontuação).
-// Não é perfeito como o de um editor, mas acerta o que importa nos trechos.
+function montarRegras(linguagem) {
+  const regras = []
+  if (linguagem.tags) regras.push(['comentario', /<!--[\s\S]*?-->/y])
+  if (linguagem.comentarioBloco) regras.push(['comentario', /\/\*[\s\S]*?\*\//y])
+  if (linguagem.comentarioLinha) regras.push(['comentario', new RegExp(linguagem.comentarioLinha + '.*', 'y')])
+  regras.push(['texto', /`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/y])
 
-function regras(L) {
-  const R = []
-  if (L.markup) R.push(['cm', /<!--[\s\S]*?-->/y])
-  if (L.bloco) R.push(['cm', /\/\*[\s\S]*?\*\//y])
-  if (L.linha) R.push(['cm', new RegExp(L.linha + '.*', 'y')])
-  R.push(['st', /`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/y])
-
-  if (L.markup) {
-    R.push(['tg', /<\/?[A-Za-z][\w-]*|(?<![=-])\/?>/y])
-    R.push(['at', /[@:]?[A-Za-z][\w.-]*(?==)/y])
+  if (linguagem.tags) {
+    // o lookbehind evita pintar o ">" de "=>" como fim de tag
+    regras.push(['tag', /<\/?[A-Za-z][\w-]*|(?<![=-])\/?>/y])
+    regras.push(['atributo', /[@:]?[A-Za-z][\w.-]*(?==)/y])
   }
-  if (L.decorator) R.push(['fn', /@[\w.]+/y])
+  if (linguagem.decoradores) regras.push(['funcao', /@[\w.]+/y])
 
-  if (L.css) {
-    R.push(['kw', /@[\w-]+/y])
-    R.push(['nu', /#[0-9a-fA-F]{3,8}\b/y])
-    R.push(['fn', /\.[A-Za-z][\w-]*/y])
-    R.push(['kw', /:[A-Za-z][\w-]*/y])
-    R.push(['at', /--[\w-]+/y])
-    R.push(['nu', /\d*\.?\d+(?:px|rem|em|%|s|ms|fr|vh|vw|deg)?/y])
-    R.push(['at', /[A-Za-z][\w-]*(?=\s*:\s)/y])
-    R.push(['fn', /[A-Za-z][\w-]*(?=\()/y])
-    R.push(['ty', /[A-Za-z][\w-]*/y])
+  if (linguagem.css) {
+    regras.push(['chave', /@[\w-]+/y])
+    regras.push(['numero', /#[0-9a-fA-F]{3,8}\b/y])
+    regras.push(['funcao', /\.[A-Za-z][\w-]*/y])
+    regras.push(['chave', /:[A-Za-z][\w-]*/y])
+    regras.push(['atributo', /--[\w-]+/y])
+    regras.push(['numero', /\d*\.?\d+(?:px|rem|em|%|s|ms|fr|vh|vw|deg)?/y])
+    regras.push(['atributo', /[A-Za-z][\w-]*(?=\s*:\s)/y])
+    regras.push(['funcao', /[A-Za-z][\w-]*(?=\()/y])
+    regras.push(['tipo', /[A-Za-z][\w-]*/y])
   } else {
-    R.push(['nu', /0x[0-9a-fA-F]+|\d+(?:\.\d+)?/y])
-    R.push(['id', /[A-Za-z_$][\w$]*/y])
+    regras.push(['numero', /0x[0-9a-fA-F]+|\d+(?:\.\d+)?/y])
+    regras.push(['identificador', /[A-Za-z_$][\w$]*/y])
   }
-  return R
+  return regras
 }
 
-function classificar(palavra, inicio, src, L) {
-  if (L.kw.has(L.maiusculas ? palavra.toUpperCase() : palavra)) return 'kw'
+function classificarIdentificador(palavra, inicio, codigo, linguagem) {
+  if (linguagem.palavrasChave.has(linguagem.ignoraMaiusculas ? palavra.toUpperCase() : palavra)) return 'chave'
   let j = inicio + palavra.length
-  while (src[j] === ' ') j++
-  if (src[j] === '(') return 'fn'
-  if (src[inicio - 1] === '.') return 'pr'
-  if (/^[A-Z]/.test(palavra)) return 'ty'
-  return 'tx'
+  while (codigo[j] === ' ') j++
+  if (codigo[j] === '(') return 'funcao'
+  if (codigo[inicio - 1] === '.') return 'propriedade'
+  if (/^[A-Z]/.test(palavra)) return 'tipo'
+  return 'nome'
 }
 
-export function colorir(src, L) {
-  const tipos = new Array(src.length).fill('tx')
-  const R = regras(L)
+// Devolve o tipo de cada caractere do código (chave, texto, funcao...), que vira a cor
+export function colorir(codigo, linguagem) {
+  const tipos = new Array(codigo.length).fill('nome')
+  const regras = montarRegras(linguagem)
   let i = 0
 
-  while (i < src.length) {
-    let achou = false
-    for (const [tipo, re] of R) {
+  while (i < codigo.length) {
+    const regra = regras.find(([, re]) => {
       re.lastIndex = i
-      const m = re.exec(src)
-      if (m && m[0].length) {
-        tipos.fill(tipo === 'id' ? classificar(m[0], i, src, L) : tipo, i, i + m[0].length)
-        i += m[0].length
-        achou = true
-        break
-      }
-    }
-    if (!achou) {
-      if (/[{}()[\];,.:=+\-*/<>!&|?%^~]/.test(src[i])) tipos[i] = 'pu'
+      return re.test(codigo) && re.lastIndex > i
+    })
+    if (regra) {
+      const [tipo, re] = regra
+      const fim = re.lastIndex
+      tipos.fill(tipo === 'identificador' ? classificarIdentificador(codigo.slice(i, fim), i, codigo, linguagem) : tipo, i, fim)
+      i = fim
+    } else {
+      if (/[{}()[\];,.:=+\-*/<>!&|?%^~]/.test(codigo[i])) tipos[i] = 'pontuacao'
       i++
     }
   }

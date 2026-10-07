@@ -7,68 +7,57 @@ const props = defineProps({
 })
 
 const entrada = ref(null)
-const viewportEl = ref(null)
-const codigoEl = ref(null)
+const janela = ref(null)
+const codigo = ref(null)
 const focado = ref(false)
 
 const fim = computed(() => props.teste.fase === 'fim')
 
-const lh = ref(31)
+const alturaLinha = ref(31)
 const maxLinhas = ref(11)
 const cursorX = ref(0)
 
 const linhaDe = computed(() => {
-  const linhas = []
-  let l = 0
-  for (const c of props.teste.chars) {
-    linhas.push(l)
-    if (c.ch === '\n') l++
-  }
-  return linhas
+  let linha = 0
+  return props.teste.letras.map(({ letra }) => (letra === '\n' ? linha++ : linha))
 })
-const totalLinhas = computed(() => (linhaDe.value.at(-1) ?? 0) + 1)
-const linhaAtual = computed(() => {
-  const n = props.teste.chars.length
-  return linhaDe.value[Math.min(props.teste.pos, n - 1)] ?? 0
-})
+const totalLinhas = computed(() => linhaDe.value.at(-1) + 1)
+const linhaAtual = computed(() => linhaDe.value[Math.min(props.teste.posicao, linhaDe.value.length - 1)])
 const visiveis = computed(() => Math.min(totalLinhas.value, maxLinhas.value))
-const altura = computed(() => `${visiveis.value * lh.value}px`)
+const altura = computed(() => `${visiveis.value * alturaLinha.value}px`)
 // mantém 2 linhas acima do cursor à vista
 const topo = computed(() => Math.max(0, Math.min(linhaAtual.value - 2, totalLinhas.value - visiveis.value)))
-const deslocamento = computed(() => `translateY(${-topo.value * lh.value}px)`)
-const alturaCursor = computed(() => Math.round(lh.value * 0.62))
+const deslocamento = computed(() => `translateY(${-topo.value * alturaLinha.value}px)`)
+const alturaCursor = computed(() => Math.round(alturaLinha.value * 0.62))
 const estiloCursor = computed(() => ({
   height: `${alturaCursor.value}px`,
-  transform: `translate(${cursorX.value}px, ${linhaAtual.value * lh.value + (lh.value - alturaCursor.value) / 2}px)`,
+  transform: `translate(${cursorX.value}px, ${linhaAtual.value * alturaLinha.value + (alturaLinha.value - alturaCursor.value) / 2}px)`,
 }))
 
-function classe(c) {
-  return `ch t-${c.tipo}${c.ch === '\n' ? ' nl' : ''}${c.st ? ' ' + c.st : ''}`
+function classeDaLetra({ letra, tipo, estado }) {
+  return ['letra', `t-${tipo}`, letra === '\n' && 'quebra', estado].filter(Boolean)
 }
 
-function posicionar() {
-  const spans = codigoEl.value?.children
-  if (!spans?.length) return
-  const noFim = props.teste.pos >= spans.length
-  const sp = spans[noFim ? spans.length - 1 : props.teste.pos]
-  const x = sp.offsetLeft + (noFim ? sp.offsetWidth : 0)
+function posicionarCursor() {
+  const spans = codigo.value.children
+  const noFim = props.teste.posicao === spans.length
+  const span = spans[noFim ? spans.length - 1 : props.teste.posicao]
+  const x = span.offsetLeft + (noFim ? span.offsetWidth : 0)
   cursorX.value = x
 
-  // rolagem lateral em linhas compridas (celular)
-  const vp = viewportEl.value
-  const largura = vp.clientWidth
-  if (x - vp.scrollLeft > largura - 48) vp.scrollLeft = x - largura / 2
-  else if (x < vp.scrollLeft + 16) vp.scrollLeft = Math.max(0, x - 48)
+  // no celular a linha pode passar da largura da tela
+  const largura = janela.value.clientWidth
+  if (x - janela.value.scrollLeft > largura - 48) janela.value.scrollLeft = x - largura / 2
+  else if (x < janela.value.scrollLeft + 16) janela.value.scrollLeft = Math.max(0, x - 48)
 }
 
 function medir() {
-  if (!viewportEl.value) return
-  lh.value = parseFloat(getComputedStyle(viewportEl.value).lineHeight) || 31
+  alturaLinha.value = parseFloat(getComputedStyle(janela.value).lineHeight)
   maxLinhas.value = window.innerWidth < 640 ? 8 : 11
-  posicionar()
+  posicionarCursor()
 }
 
-watch(() => [props.teste.pos, props.teste.chars], posicionar, { flush: 'post' })
+watch(() => [props.teste.posicao, props.teste.letras], posicionarCursor, { flush: 'post' })
 
 // A textarea fica invisível e recebe as teclas. Ela sempre guarda um espaço
 // (a "sentinela"): se ele some, o teclado do celular apagou algo (backspace).
@@ -80,37 +69,34 @@ function limparEntrada() {
 }
 
 function aoTeclar(e) {
-  const t = props.teste
-  if (e.key === 'Tab') { e.preventDefault(); return t.reiniciar() }
-  if (e.key === 'Escape') { e.preventDefault(); return t.outroTrecho() }
-  if (t.fase === 'fim') {
-    if (e.key === 'Enter') { e.preventDefault(); t.outroTrecho() }
+  const { teste } = props
+  if (e.key === 'Tab') { e.preventDefault(); return teste.reiniciar() }
+  if (e.key === 'Escape') { e.preventDefault(); return teste.outroTrecho() }
+  if (teste.fase === 'fim') {
+    if (e.key === 'Enter') { e.preventDefault(); teste.outroTrecho() }
     return
   }
-  if (e.key === 'Enter') { e.preventDefault(); return t.digitar('\n') }
-  if (e.key === 'Backspace') { e.preventDefault(); return t.apagar(e.ctrlKey || e.altKey || e.metaKey) }
+  if (e.key === 'Enter') { e.preventDefault(); return teste.digitar('\n') }
+  if (e.key === 'Backspace') { e.preventDefault(); return teste.apagar(e.ctrlKey || e.altKey || e.metaKey) }
 }
 
-// O texto chega pelo evento input (funciona com acentos do ABNT2 e no celular)
-function despejar() {
+// Lê o texto pelo evento input, e não pelo keydown, para aceitar acentos do ABNT2 e o teclado do celular
+function lerEntrada() {
   const valor = entrada.value.value
   limparEntrada()
   if (!valor.startsWith(SENTINELA)) return props.teste.apagar(false)
-  for (const c of valor.slice(SENTINELA.length)) props.teste.digitar(c === '\r' ? '\n' : c)
-}
-function aoDigitar(e) {
-  if (!e.isComposing) despejar()
+  for (const letra of valor.slice(SENTINELA.length)) props.teste.digitar(letra === '\r' ? '\n' : letra)
 }
 
 function focar() {
-  entrada.value?.focus({ preventScroll: true })
+  entrada.value.focus({ preventScroll: true })
 }
 defineExpose({ focar })
 
 onMounted(() => {
   limparEntrada()
   medir()
-  document.fonts?.ready.then(medir)
+  document.fonts.ready.then(medir)
   window.addEventListener('resize', medir)
   focar()
 })
@@ -136,15 +122,15 @@ onUnmounted(() => window.removeEventListener('resize', medir))
     </div>
 
     <div v-show="!fim" class="corpo" @mousedown.prevent="focar">
-      <div class="gutter" :style="{ height: altura }">
+      <div class="numeros" :style="{ height: altura }">
         <div class="rolagem" :style="{ transform: deslocamento }">
           <span v-for="n in totalLinhas" :key="n" :class="{ atual: n - 1 === linhaAtual }">{{ n }}</span>
         </div>
       </div>
-      <div ref="viewportEl" class="viewport" :style="{ height: altura }">
+      <div ref="janela" class="janela" :style="{ height: altura }">
         <div class="rolagem conteudo" :style="{ transform: deslocamento }">
-          <div class="linha-atual" :style="{ height: `${lh}px`, transform: `translateY(${linhaAtual * lh}px)` }"></div>
-          <pre ref="codigoEl" class="codigo"><template v-for="(c, i) in teste.chars" :key="i"><span :class="classe(c)">{{ c.ch === '\n' ? '↵' : c.ch }}</span><template v-if="c.ch === '\n'">{{ '\n' }}</template></template></pre>
+          <div class="linha-atual" :style="{ height: `${alturaLinha}px`, transform: `translateY(${linhaAtual * alturaLinha}px)` }"></div>
+          <pre ref="codigo" class="codigo"><template v-for="(l, i) in teste.letras" :key="i"><span :class="classeDaLetra(l)">{{ l.letra === '\n' ? '↵' : l.letra }}</span><template v-if="l.letra === '\n'">{{ '\n' }}</template></template></pre>
           <div class="cursor" :class="{ piscando: teste.fase !== 'digitando' }" :style="estiloCursor"></div>
         </div>
       </div>
@@ -162,8 +148,8 @@ onUnmounted(() => window.removeEventListener('resize', medir))
       spellcheck="false"
       aria-label="Digite o código"
       @keydown="aoTeclar"
-      @input="aoDigitar"
-      @compositionend="despejar"
+      @input="(e) => !e.isComposing && lerEntrada()"
+      @compositionend="lerEntrada"
       @focus="focado = true"
       @blur="focado = false"
     ></textarea>
@@ -174,27 +160,27 @@ onUnmounted(() => window.removeEventListener('resize', medir))
 .editor { position: relative; }
 .barra {
   display: flex; align-items: stretch; justify-content: space-between;
-  border-bottom: 1px solid var(--line); min-height: 44px; padding-right: 16px;
+  border-bottom: 1px solid var(--linha); min-height: 44px; padding-right: 16px;
 }
 .aba {
   display: flex; align-items: center; gap: 8px; padding: 0 18px;
-  font-family: var(--mono); font-size: 13px; color: var(--fg);
-  border-right: 1px solid var(--line); box-shadow: inset 0 -1px 0 #fff;
+  font-family: var(--mono); font-size: 13px; color: var(--texto);
+  border-right: 1px solid var(--linha); box-shadow: inset 0 -1px 0 #fff;
   min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .aba i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
-.ao-vivo { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; padding-left: 12px; }
-.ao-vivo b { color: var(--fg); font-weight: 500; }
+.ao-vivo { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--apagado); white-space: nowrap; padding-left: 12px; }
+.ao-vivo b { color: var(--texto); font-weight: 500; }
 
 .corpo { position: relative; display: flex; padding: 22px 0; cursor: text; }
-.gutter, .viewport { font-family: var(--mono); font-size: 17px; line-height: 1.85; }
-.gutter {
+.numeros, .janela { font-family: var(--mono); font-size: 17px; line-height: 1.85; }
+.numeros {
   flex: none; overflow: hidden; padding: 0 18px 0 20px; text-align: right;
   color: #3d3d3d; user-select: none; font-variant-numeric: tabular-nums;
 }
-.gutter span { display: block; transition: color 0.15s; }
-.gutter span.atual { color: var(--muted); }
-.viewport {
+.numeros span { display: block; transition: color 0.15s; }
+.numeros span.atual { color: var(--apagado); }
+.janela {
   position: relative; flex: 1; min-width: 0;
   overflow-x: auto; overflow-y: hidden; padding-right: 24px;
   scrollbar-width: thin; scrollbar-color: #333 transparent;
@@ -204,11 +190,11 @@ onUnmounted(() => window.removeEventListener('resize', medir))
 .conteudo { position: relative; width: max-content; }
 .codigo { margin: 0; font: inherit; white-space: pre; }
 
-.ch { color: var(--pending); }
-.ch.ok, .ch.auto { color: var(--tc); }
-.ch.err { color: var(--err); background: rgba(255, 99, 105, 0.16); border-radius: 2px; }
-.ch.nl { color: transparent; }
-.ch.nl.err { color: var(--err); }
+.letra { color: var(--pendente); }
+.letra.ok, .letra.auto { color: var(--cor-token); }
+.letra.erro { color: var(--erro); background: rgba(255, 99, 105, 0.16); border-radius: 2px; }
+.letra.quebra { color: transparent; }
+.letra.quebra.erro { color: var(--erro); }
 
 .linha-atual {
   position: absolute; left: -24px; right: -24px; top: 0;
@@ -223,11 +209,11 @@ onUnmounted(() => window.removeEventListener('resize', medir))
 .cursor.piscando { animation: piscar 1s steps(1) infinite; }
 @keyframes piscar { 50% { opacity: 0; } }
 
-.desfocado .viewport, .desfocado .gutter { filter: blur(4px); opacity: 0.45; }
+.desfocado .janela, .desfocado .numeros { filter: blur(4px); opacity: 0.45; }
 .desfocado .cursor { display: none; }
 .refocar {
   position: absolute; inset: 0; display: none; place-items: center;
-  color: var(--fg); font-size: 14px; pointer-events: none; text-align: center; padding: 0 16px;
+  color: var(--texto); font-size: 14px; pointer-events: none; text-align: center; padding: 0 16px;
 }
 .desfocado .refocar { display: grid; }
 
@@ -237,8 +223,8 @@ onUnmounted(() => window.removeEventListener('resize', medir))
 }
 
 @media (max-width: 640px) {
-  .gutter, .viewport { font-size: 14px; }
-  .gutter { padding: 0 12px; }
+  .numeros, .janela { font-size: 14px; }
+  .numeros { padding: 0 12px; }
   .corpo { padding: 16px 0; }
   .aba { padding: 0 14px; font-size: 12px; }
   .ao-vivo { gap: 12px; font-size: 12px; }

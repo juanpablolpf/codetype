@@ -20,7 +20,7 @@ teste.outroTrecho()
 
 const editor = ref(null)
 const explicacao = ref(null)
-const focar = () => editor.value?.focar()
+const focar = () => editor.value.focar()
 
 watch(categoria, (c) => {
   armazenamento.salvar('ct:lang', c)
@@ -33,21 +33,16 @@ watch(modo, (m) => {
   focar()
 })
 
-function acao(fn) {
-  fn()
-  focar()
-}
-
 async function explicar() {
   await nextTick()
   const suave = !matchMedia('(prefers-reduced-motion: reduce)').matches
-  explicacao.value?.$el.scrollIntoView({ behavior: suave ? 'smooth' : 'auto' })
+  explicacao.value.$el.scrollIntoView({ behavior: suave ? 'smooth' : 'auto' })
   focar()
 }
 
 function teclaGlobal(e) {
   if (e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return
-  if (e.target.closest?.('button') && (e.key === 'Enter' || e.key === ' ')) return
+  if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return
   if (e.key === 'Tab' || e.key === 'Escape') {
     e.preventDefault()
     e.key === 'Tab' ? teste.reiniciar() : teste.outroTrecho()
@@ -60,7 +55,7 @@ onUnmounted(() => document.removeEventListener('keydown', teclaGlobal))
 </script>
 
 <template>
-  <div class="wrap">
+  <div class="pagina">
     <header class="topo">
       <div class="logo"><span class="marca"></span>codetype</div>
       <div class="recorde" :title="teste.descricao">
@@ -72,7 +67,7 @@ onUnmounted(() => document.removeEventListener('keydown', teclaGlobal))
     <section class="intro">
       <h1>Treine digitando código de verdade.</h1>
       <p>
-        Trechos dos seus projetos e de JavaScript, TypeScript, Vue, Python, SQL e CSS.
+        Trechos dos meus projetos e de JavaScript, TypeScript, Vue, Python, SQL e CSS.
         O código ganha cor conforme você acerta, e no fim você vê o que cada linha faz.
       </p>
     </section>
@@ -86,8 +81,8 @@ onUnmounted(() => document.removeEventListener('keydown', teclaGlobal))
           :historico="teste.historico"
           :descricao="teste.descricao"
           @explicar="explicar"
-          @repetir="acao(teste.reiniciar)"
-          @proximo="acao(teste.outroTrecho)"
+          @repetir="teste.reiniciar(); focar()"
+          @proximo="teste.outroTrecho(); focar()"
         />
       </EditorDigitacao>
 
@@ -98,9 +93,9 @@ onUnmounted(() => document.removeEventListener('keydown', teclaGlobal))
           <span><kbd>enter</kbd>nova linha, já indentada</span>
           <span><kbd>ctrl</kbd><kbd>⌫</kbd>apagar palavra</span>
         </div>
-        <div class="btns toque">
-          <button class="btn" type="button" @click="acao(teste.reiniciar)">Recomeçar</button>
-          <button class="btn" type="button" @click="acao(teste.outroTrecho)">Outro trecho</button>
+        <div class="botoes toque">
+          <button class="botao" type="button" @click="teste.reiniciar(); focar()">Recomeçar</button>
+          <button class="botao" type="button" @click="teste.outroTrecho(); focar()">Outro trecho</button>
         </div>
       </div>
 
@@ -115,8 +110,8 @@ onUnmounted(() => document.removeEventListener('keydown', teclaGlobal))
 .topo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0; }
 .logo { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 17px; letter-spacing: -0.02em; }
 .marca { width: 9px; height: 18px; background: #fff; border-radius: 2px; }
-.recorde { font-size: 13px; color: var(--muted); white-space: nowrap; }
-.recorde b { color: var(--fg); font-weight: 500; font-family: var(--mono); }
+.recorde { font-size: 13px; color: var(--apagado); white-space: nowrap; }
+.recorde b { color: var(--texto); font-weight: 500; font-family: var(--mono); }
 
 .intro { padding: 48px 0 32px; }
 h1 {
@@ -125,13 +120,13 @@ h1 {
   background: linear-gradient(180deg, #fff 30%, #8f8f8f);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.intro p { margin: 14px 0 0; color: var(--muted); max-width: 54ch; }
+.intro p { margin: 14px 0 0; color: var(--apagado); max-width: 54ch; }
 
 .atalhos { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
-.teclas { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--faint); }
+.teclas { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--discreto); }
 .toque { display: none; }
 
-footer { padding: 64px 0 40px; color: var(--faint); font-size: 13px; }
+footer { padding: 64px 0 40px; color: var(--discreto); font-size: 13px; }
 
 @media (hover: none) {
   .teclas { display: none; }
