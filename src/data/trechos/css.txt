@@ -1,0 +1,84 @@
+@@ botao.css
+.botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+}
+
+.botao:hover {
+  opacity: 0.85;
+}
+%% Um botão em formato de pílula, como os do Resend.
+1: Vale para todo elemento com class="botao".
+2: O inline-flex deixa o botão na linha do texto, mas organiza o conteúdo (texto e ícone) com flexbox.
+3: Centraliza os itens na vertical.
+4: O espaço entre o texto e o ícone.
+5: O espaço interno: 10px em cima e embaixo, 16px nas laterais.
+6: Um raio enorme deixa as pontas totalmente redondas, no formato de pílula.
+7-8: Fundo branco e texto preto.
+11-13: O :hover vale quando o mouse está em cima, e aí o botão fica um pouco transparente.
+
+@@ galeria.css
+.galeria {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+%% Uma grade que se ajusta sozinha à tela, sem precisar de media query.
+2: Transforma o elemento numa grade.
+3-4: Cria quantas colunas couberem (auto-fill), cada uma com pelo menos 220px e dividindo o espaço que sobra (1fr). No celular vira uma coluna e no desktop vira várias.
+5: O espaço entre as células.
+
+@@ tema.css
+:root {
+  --fundo: #000;
+  --texto: #ededed;
+  --borda: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: system-ui, sans-serif;
+}
+%% Variáveis de CSS para guardar as cores do tema num lugar só.
+1: O :root é o elemento html, então as variáveis declaradas aqui valem na página inteira.
+2-3: As variáveis começam com dois traços. Aqui, fundo preto e texto quase branco.
+4: O rgba é uma cor com transparência: branco com 8% de opacidade, bom para bordas discretas.
+7-9: O var() lê a variável. Para mudar o tema, basta trocar o valor no :root.
+10: Usa a fonte padrão do sistema e, se não houver, qualquer fonte sem serifa.
+
+@@ animacao.css
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.card {
+  animation: surgir 0.4s ease-out both;
+}
+%% Uma animação de entrada em que o card aparece subindo um pouco.
+1: O @keyframes cria uma animação com nome, aqui surgir.
+2: Começa invisível e 8px mais abaixo.
+3: Termina visível e na posição normal.
+6-7: Aplica no card: dura 0,4 s e desacelera no final (ease-out). O both mantém o estado inicial antes de começar e o final depois de terminar.
+
+@@ layout.css
+.container {
+  width: min(100% - 32px, 1080px);
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .menu { display: none; }
+}
+%% Um container centralizado com margem no celular, e um menu que some em telas pequenas.
+2: O min() escolhe o menor dos dois: a largura toda menos 32px (16px de cada lado) ou 1080px. Em telas largas, ele para em 1080.
+3: O margin-inline: auto centraliza na horizontal, com margem automática à esquerda e à direita.
+6: Uma media query: as regras de dentro só valem em telas de até 640px.
+7: Esconde o menu no celular.

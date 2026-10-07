@@ -1,0 +1,82 @@
+@@ tipos.ts
+type Status = "pendente" | "aprovado" | "recusado";
+
+interface Reembolso {
+  id: string;
+  valor: number;
+  status: Status;
+  criadoEm: Date;
+}
+%% Descreve o formato de um reembolso, como no RefundPay. Isso só existe para o TypeScript checar o código e some quando ele vira JavaScript.
+1: Um tipo união: Status só aceita um desses três textos. Qualquer outro dá erro antes mesmo de rodar.
+3: A interface define o formato que um objeto Reembolso precisa ter.
+4-5: O id é texto e o valor é número.
+6: O status usa o tipo da linha 1, então só aceita os três valores.
+7: O criadoEm é um objeto Date.
+
+@@ http.ts
+export async function get<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(res.statusText);
+  return (await res.json()) as T;
+}
+%% Um GET reaproveitável que já devolve a resposta com o tipo certo.
+1: O <T> é um genérico: quem chama diz o tipo esperado, ex.: get<Usuario>("/api/eu"), e a função promete devolver esse tipo.
+2-4: Faz a requisição avisando, pelo cabeçalho, que trabalha com JSON.
+5: Se o status não for de sucesso, lança um erro com a mensagem do status (ex.: "Not Found").
+6: Lê o JSON e diz ao TypeScript que ele tem o formato T. O as não confere nada de verdade, só confia.
+
+@@ result.ts
+type Result<T, E = Error> =
+  | { ok: true; data: T }
+  | { ok: false; error: E };
+
+function dividir(a: number, b: number): Result<number> {
+  if (b === 0) {
+    return { ok: false, error: new Error("b é zero") };
+  }
+  return { ok: true, data: a / b };
+}
+%% Um jeito de devolver sucesso ou erro sem lançar exceção, em que o TypeScript obriga quem chama a checar.
+1: O Result tem dois genéricos: T é o tipo do dado e E é o do erro, que vira Error se não for informado.
+2-3: Ou é sucesso (ok: true com data) ou é falha (ok: false com error). Quando você checa o ok, o TypeScript sabe qual dos dois tem na mão.
+5: A dividir promete devolver um Result com um número dentro.
+6-8: Dividir por zero vira uma falha com a mensagem de erro.
+9: No caso normal, devolve sucesso com o resultado.
+
+@@ cache.ts
+class Cache<K, V> {
+  private mapa = new Map<K, V>();
+
+  get(chave: K): V | undefined {
+    return this.mapa.get(chave);
+  }
+
+  set(chave: K, valor: V): this {
+    this.mapa.set(chave, valor);
+    return this;
+  }
+}
+%% Uma classe de cache genérica por cima de um Map.
+1: K é o tipo da chave e V é o do valor, escolhidos ao criar, ex.: new Cache<string, number>().
+2: O private faz com que só a própria classe enxergue o mapa. Um Map guarda pares de chave e valor.
+4-6: O get busca um valor. Ele pode voltar undefined se a chave não existir, e o tipo deixa isso claro.
+8: O set devolve this (a própria instância), e isso permite encadear: cache.set(a, 1).set(b, 2).
+9-10: Salva o par e devolve a instância.
+
+@@ planos.ts
+enum Plano {
+  Gratis = "gratis",
+  Pro = "pro",
+}
+
+const limites: Record<Plano, number> = {
+  [Plano.Gratis]: 3,
+  [Plano.Pro]: 100,
+};
+%% Limites por plano de assinatura, com o TypeScript garantindo que nenhum plano fique de fora.
+1-4: O enum cria um conjunto fixo de valores com nome. Quando o código roda, Plano.Pro vale "pro".
+6: Record<Plano, number> é um objeto com uma chave para cada plano, em que todos os valores são números. Se faltar um plano, dá erro.
+7-8: Os colchetes usam o valor do enum como nome da chave. O plano grátis tem limite 3 e o Pro tem 100.

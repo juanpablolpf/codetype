@@ -1,0 +1,77 @@
+@@ contar.py
+from collections import Counter
+
+def palavras_comuns(texto, n=5):
+    palavras = texto.lower().split()
+    return Counter(palavras).most_common(n)
+
+print(palavras_comuns("o rato roeu a roupa do rei"))
+%% Conta quais palavras mais aparecem num texto.
+1: O Counter é um dicionário que conta quantas vezes cada item aparece.
+3: O def cria a função. O n=5 é o valor padrão, ou seja, as 5 mais comuns.
+4: O lower() deixa tudo minúsculo para "Rato" e "rato" contarem juntos, e o split() quebra o texto nos espaços.
+5: Conta as palavras e devolve as n mais frequentes como pares (palavra, quantidade).
+7: Chama a função e mostra o resultado no terminal.
+
+@@ conta.py
+class Conta:
+    def __init__(self, titular, saldo=0):
+        self.titular = titular
+        self.saldo = saldo
+
+    def depositar(self, valor):
+        if valor <= 0:
+            raise ValueError("valor precisa ser positivo")
+        self.saldo += valor
+%% Uma classe de conta bancária com depósito validado.
+1: Define a classe Conta.
+2: O __init__ é o construtor e roda quando você cria Conta("Ana"). O self é a própria instância, como o this do JavaScript, só que escrito sempre.
+3-4: Guarda o titular e o saldo na instância. O saldo começa em 0 se não for informado.
+6: Um método. O primeiro parâmetro é sempre o self.
+7-8: Bloqueia depósito zero ou negativo lançando um erro (o raise é o throw do Python).
+9: Soma o valor ao saldo.
+
+@@ main.py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/itens/{item_id}")
+def ler_item(item_id: int, q: str | None = None):
+    return {"item_id": item_id, "q": q}
+%% Uma API com FastAPI, que é como um Express do Python, com validação automática pelos tipos.
+1-3: Importa e cria a aplicação.
+5: Um decorator: ele registra a função de baixo como rota GET. O {item_id} é um pedaço variável da URL.
+6: Os tipos fazem o trabalho: item_id precisa ser inteiro (se não for, a API responde 422 sozinha) e q é um parâmetro opcional da URL (?q=...).
+7: O dicionário devolvido vira JSON automaticamente.
+
+@@ arquivo.py
+import json
+from pathlib import Path
+
+def carregar(caminho):
+    arquivo = Path(caminho)
+    if not arquivo.exists():
+        return {}
+    with arquivo.open(encoding="utf-8") as f:
+        return json.load(f)
+%% Lê um arquivo JSON e devolve um dicionário vazio se ele não existir.
+1-2: O json lê e escreve JSON, e o Path é o jeito moderno de lidar com caminhos de arquivo.
+5: Transforma o texto do caminho num objeto Path.
+6-7: Se o arquivo não existe, devolve um dicionário vazio em vez de quebrar.
+8: O with abre o arquivo e garante que ele seja fechado no fim, mesmo se der erro. O utf-8 evita problema com acentos.
+9: Converte o conteúdo JSON em dicionário Python.
+
+@@ quadrados.py
+numeros = range(1, 21)
+pares = [n for n in numeros if n % 2 == 0]
+quadrados = {n: n ** 2 for n in pares}
+
+for chave, valor in quadrados.items():
+    print(f"{chave} ao quadrado = {valor}")
+%% Compreensões de lista e de dicionário, o jeito curto do Python de fazer filter e map.
+1: O range(1, 21) vai de 1 a 20, porque o número final não entra.
+2: Uma list comprehension: pega cada n e mantém só os pares. É um filter em uma linha.
+3: Uma dict comprehension: monta um dicionário de número para quadrado. O ** é potência.
+5: O items() devolve pares (chave, valor), que já são separados em duas variáveis.
+6: Numa f-string, as chaves dentro do texto são trocadas pelos valores, como na template string do JS.

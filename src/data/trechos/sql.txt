@@ -1,0 +1,75 @@
+@@ relatorio.sql
+SELECT c.nome,
+       COUNT(p.id) AS pedidos,
+       SUM(p.total) AS gasto
+FROM clientes c
+JOIN pedidos p ON p.cliente_id = c.id
+WHERE p.criado_em >= '2026-01-01'
+GROUP BY c.nome
+HAVING SUM(p.total) > 500
+ORDER BY gasto DESC
+LIMIT 10;
+%% Os 10 clientes que mais gastaram em 2026, entre os que passaram de 500.
+1-3: As colunas do resultado: o nome do cliente, quantos pedidos ele fez e quanto gastou no total. O AS dá nome à coluna.
+4: Parte da tabela clientes, apelidada de c.
+5: Junta cada cliente com os pedidos dele (apelido p), ligando pelo id do cliente. Clientes sem pedido ficam de fora.
+6: Só entram pedidos a partir de 1º de janeiro de 2026. O WHERE filtra as linhas antes de agrupar.
+7: Agrupa por cliente, para o COUNT e o SUM contarem por pessoa.
+8: O HAVING filtra depois de agrupar: só ficam clientes com mais de 500 no total.
+9-10: Ordena do maior gasto para o menor e pega só os 10 primeiros.
+
+@@ reembolsos.sql
+CREATE TABLE reembolsos (
+  id SERIAL PRIMARY KEY,
+  descricao TEXT NOT NULL,
+  valor NUMERIC(10, 2) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pendente',
+  criado_em TIMESTAMP DEFAULT NOW()
+);
+%% Cria a tabela de reembolsos no PostgreSQL.
+1: Cria a tabela reembolsos.
+2: O id é um número que aumenta sozinho (SERIAL) e identifica cada linha (PRIMARY KEY).
+3: Um texto de tamanho livre. O NOT NULL impede que fique vazio.
+4: O NUMERIC(10, 2) guarda dinheiro sem erro de arredondamento: até 10 dígitos, sendo 2 depois da vírgula.
+5: Um texto de até 20 caracteres, que começa como 'pendente' se ninguém informar.
+6: Data e hora, preenchidas automaticamente com o momento da criação.
+
+@@ estoque.sql
+UPDATE produtos
+SET estoque = estoque - 1
+WHERE id = 42 AND estoque > 0
+RETURNING id, estoque;
+%% Tira uma unidade do estoque de um produto sem deixar o estoque ficar negativo.
+1: Vai alterar linhas da tabela produtos.
+2: Diminui o estoque em 1.
+3: Só no produto 42 e só se ainda houver estoque. Sem o WHERE, a tabela inteira seria alterada.
+4: O RETURNING (do PostgreSQL) devolve como ficou a linha alterada. Se não voltar nada, o produto estava sem estoque.
+
+@@ receita.sql
+WITH vendas_mes AS (
+  SELECT date_trunc('month', criado_em) AS mes,
+         SUM(total) AS receita
+  FROM pedidos
+  GROUP BY 1
+)
+SELECT mes, receita
+FROM vendas_mes
+ORDER BY mes;
+%% A receita de cada mês, usando uma CTE, que é uma consulta com nome, como uma variável.
+1: O WITH cria uma tabela temporária chamada vendas_mes, que só existe dentro desta consulta.
+2: O date_trunc corta a data no começo do mês, então todos os pedidos de março viram "1º de março".
+3-4: Soma o total dos pedidos.
+5: O GROUP BY 1 agrupa pela primeira coluna do SELECT, que é o mês.
+7-9: Lê a tabela temporária e ordena do mês mais antigo para o mais novo.
+
+@@ clientes.sql
+CREATE INDEX idx_pedidos_cliente
+ON pedidos (cliente_id, criado_em DESC);
+
+INSERT INTO clientes (nome, email)
+VALUES ('Ana', 'ana@email.com')
+ON CONFLICT (email) DO NOTHING;
+%% Um índice para acelerar buscas e um insert que não duplica cliente.
+1-2: Cria um índice, como o índice de um livro: buscar os pedidos de um cliente, dos mais novos para os mais antigos, fica muito mais rápido.
+4-5: Insere uma cliente informando as colunas e os valores na mesma ordem.
+6: Se já existir alguém com esse email (a coluna precisa ser única), ignora em vez de dar erro.

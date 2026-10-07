@@ -1,0 +1,81 @@
+@@ debounce.js
+export function debounce(fn, wait = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
+%% Cria uma versão da função que só roda depois que você para de chamá-la por um tempo. É o que se usa num campo de busca para não chamar a API a cada tecla.
+1: Exporta a função. Ela recebe a função original (fn) e o tempo de espera em milissegundos, que fica 300 se ninguém passar outro.
+2: Guarda o id do timer atual. Ele fica "preso" dentro da função devolvida, e isso é uma closure.
+3: Devolve uma função nova. O ...args junta todos os argumentos que ela receber num array.
+4: Toda vez que ela é chamada, cancela o timer anterior, que ainda não tinha disparado.
+5: Agenda a função original para rodar depois de wait ms, repassando os mesmos argumentos.
+6-7: Fecha a função devolvida e a debounce.
+
+@@ api.js
+async function buscarUsuario(id) {
+  const res = await fetch(`/api/usuarios/${id}`);
+  if (!res.ok) {
+    throw new Error(`Erro ${res.status}`);
+  }
+  return res.json();
+}
+%% Busca um usuário na API e trata o caso de erro.
+1: O async permite usar await lá dentro, e a função passa a devolver sempre uma Promise.
+2: Faz a requisição GET. A template string com ${id} monta a URL com o id, e o await espera a resposta chegar.
+3-5: O res.ok é falso para status fora de 200 a 299 (404, 500...). Nesse caso a função lança um erro com o status, e quem chamou pode pegar com try/catch.
+6: Converte o corpo da resposta de JSON para objeto. Isso também é uma Promise, por isso pode ser devolvido direto.
+
+@@ carrinho.js
+const total = itens
+  .filter((item) => item.ativo)
+  .map((item) => item.preco * item.qtd)
+  .reduce((soma, valor) => soma + valor, 0);
+
+console.log(total.toFixed(2));
+%% Calcula o total de um carrinho encadeando métodos de array.
+1: Começa pela lista itens. Cada linha seguinte aplica um método no resultado da anterior.
+2: O filter mantém só os itens em que ativo é verdadeiro.
+3: O map troca cada item pelo subtotal dele (preço vezes quantidade), e a lista vira um array de números.
+4: O reduce soma todos esses números. O 0 no final é o valor inicial da soma.
+6: O toFixed(2) formata com duas casas decimais (vira texto, ex.: "59.90") e o resultado aparece no console.
+
+@@ server.js
+import express from "express";
+
+const app = express();
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true, hora: Date.now() });
+});
+
+app.listen(3000, () => console.log("rodando"));
+%% Um servidor Express mínimo com uma rota de "saúde", usada para checar se a API está de pé.
+1: Importa o Express, a biblioteca de servidor HTTP mais usada no Node.
+3: Cria a aplicação.
+4: Middleware que lê o corpo das requisições em JSON e coloca em req.body.
+6: Registra uma rota GET em /health. O req é o pedido que chegou, e o res é a resposta que você monta.
+7: Responde com um JSON que tem ok e a hora atual em milissegundos.
+8: Fecha a rota.
+10: Liga o servidor na porta 3000 e avisa no terminal quando ele está pronto.
+
+@@ agrupar.js
+function agruparPor(lista, chave) {
+  return lista.reduce((grupos, item) => {
+    const valor = item[chave];
+    grupos[valor] ??= [];
+    grupos[valor].push(item);
+    return grupos;
+  }, {});
+}
+%% Agrupa uma lista de objetos por um campo, por exemplo pedidos por status.
+1: Recebe a lista e o nome do campo usado para agrupar (ex.: "status").
+2: O reduce percorre a lista montando um objeto acumulador chamado grupos.
+3: Lê o valor do campo no item. Os colchetes permitem usar um nome de campo que está guardado numa variável.
+4: O ??= só cria o array vazio se aquele grupo ainda não existir (se for null ou undefined).
+5: Coloca o item no grupo dele.
+6: Devolve o acumulador para a próxima volta do reduce.
+7: O {} é o valor inicial, ou seja, começa com um objeto vazio.

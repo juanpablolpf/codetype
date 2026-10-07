@@ -1,0 +1,302 @@
+@@ RefundPay/AppError.ts
+class AppError {
+  message: string
+  statusCode: number
+
+  constructor(message: string, statusCode = 400) {
+    this.message = message
+    this.statusCode = statusCode
+  }
+}
+
+export { AppError }
+%% A classe de erro do RefundPay: todo erro "esperado" da API (senha errada, pedido não encontrado) é lançado com ela, junto com o status HTTP.
+1: Uma classe simples, que não herda de Error. Ela só carrega duas informações.
+2-3: A mensagem que vai para o front e o status HTTP (400, 401, 404...).
+5: O construtor recebe as duas. Se ninguém passar o status, ele fica 400 (requisição inválida).
+6-7: Guarda os valores na instância.
+11: Exporta com chaves (export nomeado), então quem usa importa com import { AppError }.
+
+@@ RefundPay/verify-user-authorization.ts
+function verifyUserAuthorization(role: string[]) {
+  return (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    if (!request.user || !role.includes(request.user.role)) {
+      throw new AppError("Acesso negado", 403)
+    }
+
+    return next()
+  }
+}
+%% O middleware que decide quem pode acessar cada rota do RefundPay, por exemplo só o gestor aprovar reembolso.
+1: Recebe a lista de papéis permitidos, ex.: ["manager"]. É uma função que fabrica middlewares.
+2-6: Devolve o middleware de verdade: a função que o Express chama com o pedido, a resposta e o next.
+7: Se não tem usuário logado, ou se o papel dele não está na lista...
+8: ...lança o erro 403 (proibido). O middleware de erros da API transforma isso na resposta.
+11: Se passou, o next() deixa a requisição seguir para o controller.
+
+@@ RefundPay/read-token.ts
+function readToken(request: Request) {
+  const authHeader = request.headers.authorization
+
+  if (!authHeader) {
+    throw new AppError("JWT token not found", 401)
+  }
+
+  const [scheme, token] = authHeader.split(" ")
+
+  if (scheme !== "Bearer" || !token) {
+    throw new AppError("Invalid JWT token", 401)
+  }
+
+  try {
+    return verify(token, authConfig.jwt.secret, {
+      algorithms: ["HS256"],
+    }) as TokenPayload
+  } catch {
+    throw new AppError("Invalid JWT token", 401)
+  }
+}
+%% Lê o token de login que o front manda em cada requisição do RefundPay e confere se ele é válido.
+1: Recebe o pedido que chegou no Express.
+2: Pega o cabeçalho Authorization, que vem no formato "Bearer <token>".
+4-6: Sem cabeçalho, ninguém está logado: erro 401 (não autenticado).
+8: Separa o texto no espaço e pega as duas partes pela posição (desestruturação de array).
+10-12: Se a primeira parte não for "Bearer" ou se faltar o token, também é 401.
+14-17: O verify confere a assinatura com o segredo do servidor e devolve os dados de dentro do token. Fixar o algoritmo HS256 impede que alguém mande um token assinado de outro jeito.
+18-20: Se o token estiver vencido ou adulterado, o verify lança erro, que vira um 401 com a mesma mensagem.
+
+@@ RefundPay/review.ts
+async function review(
+  id: string,
+  reviewer: Reviewer,
+  status: "approved" | "rejected",
+) {
+  const { count } = await prisma.refunds.updateMany({
+    where: {
+      id,
+      organizationId: reviewer.organizationId,
+      status: "pending",
+    },
+    data: {
+      status,
+      reviewedById: reviewer.id,
+      reviewedAt: new Date(),
+    },
+  })
+
+  if (count === 0) {
+    throw new AppError("Essa solicitação já foi analisada", 409)
+  }
+}
+%% Como o gestor aprova ou recusa um reembolso no RefundPay sem que dois gestores analisem o mesmo pedido ao mesmo tempo (versão resumida).
+1-5: Recebe o id do pedido, quem está analisando e a decisão: aprovado ou recusado.
+6: O updateMany do Prisma altera todas as linhas que batem com o filtro e devolve quantas foram alteradas (count).
+7-11: O filtro: aquele pedido, da empresa de quem está analisando e ainda pendente. É por isso que uma empresa nunca mexe no pedido de outra.
+12-16: O que muda: o status novo, quem analisou e quando.
+19-21: Se nada foi alterado, o pedido já tinha sido analisado (ou não existe). O 409 significa "conflito". Como checar e alterar acontecem num comando só, dois gestores não conseguem aprovar juntos.
+
+@@ RefundPay/file-type.ts
+const SIGNATURES = [
+  { mime: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
+  { mime: "image/png", bytes: [0x89, 0x50, 0x4e, 0x47] },
+  { mime: "application/pdf", bytes: [0x25, 0x50, 0x44, 0x46] },
+]
+
+export async function detectReceiptType(filePath: string) {
+  const handle = await fs.promises.open(filePath, "r")
+
+  try {
+    const header = Buffer.alloc(8)
+    await handle.read(header, 0, header.length, 0)
+
+    return SIGNATURES.find((type) =>
+      type.bytes.every((byte, i) => header[i] === byte),
+    ) ?? null
+  } finally {
+    await handle.close()
+  }
+}
+%% Descobre se o comprovante enviado ao RefundPay é mesmo JPG, PNG ou PDF olhando os primeiros bytes do arquivo, porque o tipo que o navegador informa pode ser falsificado.
+1-5: A "assinatura" de cada formato: todo arquivo desse tipo começa com esses bytes. Os números com 0x estão em hexadecimal, que é só outro jeito de escrever números. O 0x25 0x50 0x44 0x46 é o texto "%PDF".
+7: Recebe o caminho do arquivo salvo no servidor.
+8: Abre o arquivo só para leitura ("r").
+11-12: Cria um espaço de 8 bytes (Buffer) e lê o começo do arquivo para dentro dele.
+14-16: Procura o formato em que todos os bytes da assinatura batem com o começo do arquivo. Se nenhum bater, o ?? devolve null e o envio é recusado.
+17-19: O finally roda sempre, dando certo ou errado, e garante que o arquivo seja fechado.
+
+@@ LearnEnglish/storage.ts
+export function loadStats(): UserStats {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return defaultStats
+    const parsed = JSON.parse(raw)
+    return { ...defaultStats, ...parsed }
+  } catch {
+    return defaultStats
+  }
+}
+%% Carrega o progresso salvo do LearnEnglish: sequência de acertos, palavras aprendidas e tema escuro.
+1: Promete devolver um UserStats, o tipo com todos os campos do progresso.
+2: O try protege contra erro, como localStorage bloqueado ou JSON corrompido.
+3: Lê o texto salvo com a chave do app.
+4: Na primeira visita não tem nada salvo, então devolve os valores padrão.
+5: Converte o texto de volta para objeto.
+6: Junta os dois objetos: começa pelo padrão e sobrescreve com o que estava salvo. Assim, um campo novo que você criar depois ainda ganha um valor, mesmo para quem já tinha progresso salvo.
+7-9: Se qualquer coisa der errado, devolve o padrão em vez de quebrar o app.
+
+@@ LearnEnglish/update-streak.ts
+export function updateStreak(won: boolean): UserStats {
+  const stats = loadStats()
+  if (won) {
+    stats.streak += 1
+    if (stats.streak > stats.bestStreak) {
+      stats.bestStreak = stats.streak
+    }
+  } else {
+    stats.streak = 0
+  }
+  saveStats(stats)
+  return stats
+}
+%% Atualiza a sequência de acertos depois de cada palavra no LearnEnglish.
+1: Recebe se a pessoa acertou (won) e devolve o progresso atualizado.
+2: Carrega o progresso atual.
+3-4: Se acertou, a sequência sobe 1.
+5-7: Se passou do recorde, o recorde vira a sequência atual.
+8-9: Se errou, a sequência volta para zero.
+11-12: Salva no navegador e devolve, para a tela se atualizar.
+
+@@ LearnEnglish/speech.ts
+export function speakWord(text: string, rate = 0.85) {
+  return new Promise<void>((resolve) => {
+    window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(
+      text.trim().toLowerCase(),
+    )
+    utterance.lang = "en-US"
+    utterance.rate = rate
+
+    utterance.onend = () => resolve()
+    utterance.onerror = () => resolve()
+
+    window.speechSynthesis.speak(utterance)
+  })
+}
+%% Faz o navegador falar uma palavra em inglês, como no botão de pronúncia do LearnEnglish (versão resumida).
+1: Recebe o texto e a velocidade da fala. O 0.85 é um pouco mais devagar que o normal, bom para quem está aprendendo.
+2: Embrulha tudo numa Promise, para quem chama poder usar await e esperar a fala terminar.
+3: Cancela qualquer fala anterior que ainda esteja tocando.
+5-7: Cria a fala. O toLowerCase evita que palavras como "CAR" sejam soletradas como sigla.
+8-9: Sotaque americano e a velocidade escolhida.
+11-12: Quando a fala termina, ou se der erro, a Promise é resolvida. Assim um erro não trava o app.
+14: Começa a falar.
+
+@@ LearnEnglish/VirtualKeyboard.tsx
+return (
+  <div className={styles.keyboard}>
+    {KEYBOARD_ROWS.map((row, rowIndex) => (
+      <div key={rowIndex} className={styles.row}>
+        {row.map((char) => (
+          <button
+            key={char}
+            disabled={disabled || usedMap.has(char)}
+            onClick={() => onSelectLetter(char)}
+          >
+            {char}
+          </button>
+        ))}
+      </div>
+    ))}
+  </div>
+)
+%% O teclado virtual do jogo de adivinhar palavras do LearnEnglish, em React (versão resumida).
+1: Um componente React devolve JSX, que parece HTML mas vira chamadas de JavaScript.
+2: A div de fora do teclado. No JSX a classe se escreve className, e o styles vem de um CSS Module (classes com nome único por componente).
+3: Percorre as linhas do teclado (QWERTY...) e cada linha vira uma div. É o que o v-for faz no Vue.
+4: O key ajuda o React a saber qual item é qual ao atualizar a lista, como o :key do Vue.
+5: Dentro de cada linha, percorre as letras.
+6-10: Um botão por letra. Ele fica desativado se o jogo acabou ou se a letra já foi usada, e o clique avisa o componente pai qual letra foi escolhida.
+11: O texto do botão é a própria letra.
+
+@@ aprendendo-vue/useProspeccoes.js
+export function useProspeccoes() {
+  const prospeccoes = ref(carregar())
+
+  watch(
+    prospeccoes,
+    (lista) => {
+      localStorage.setItem(CHAVE, JSON.stringify(lista))
+    },
+    { deep: true },
+  )
+
+  function mudarEtapa(id, etapa) {
+    const prospeccao = prospeccoes.value.find((p) => p.id === id)
+    if (prospeccao) prospeccao.etapa = etapa
+  }
+
+  function remover(id) {
+    prospeccoes.value = prospeccoes.value.filter(
+      (p) => p.id !== id,
+    )
+  }
+
+  return { prospeccoes, mudarEtapa, remover }
+}
+%% O composable do seu funil de prospecção no aprendendo-vue (versão resumida): guarda a lista, salva sozinho e muda a etapa de cada negócio.
+1: Um composable é o custom hook do Vue: uma função que guarda estado e devolve o que o componente precisa.
+2: A lista começa com o que estava salvo, porque a função carregar lê o localStorage.
+4-10: Sempre que a lista mudar, salva de novo. É como um useEffect com a lista nas dependências, e o deep: true pega até mudança dentro de um item.
+12-15: Acha a prospecção pelo id e troca a etapa direto no objeto. No React você teria que criar um array novo e chamar o set; no Vue, alterar já basta.
+17-21: Para remover, troca a lista inteira por uma cópia filtrada sem aquele id.
+23: Devolve o estado e as funções. No componente fica assim: const { prospeccoes, remover } = useProspeccoes().
+
+@@ aprendendo-vue/formato.js
+const reais = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+})
+
+export function formatarReais(valor) {
+  return reais.format(valor)
+}
+
+export function plural(quantidade, singular, variasFormas) {
+  return quantidade === 1 ? singular : variasFormas
+}
+%% Funções pequenas de formatação usadas no resumo do funil do aprendendo-vue.
+1: O Intl.NumberFormat é o formatador de números do próprio JavaScript. Ele é criado uma vez, fora da função, para não ser recriado a cada chamada.
+2-4: Formato de moeda em reais e sem centavos: 1200 vira "R$ 1.200".
+7-9: Usa o formatador.
+11-13: Escolhe a palavra no singular ou no plural conforme a quantidade, ex.: "1 fechado" e "3 fechados". O ? : é um if/else em uma linha.
+
+@@ aprendendo-vue/ResumoFunil.vue
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps({
+  abertas: { type: Array, required: true },
+})
+
+const fraseAbertas = computed(() => {
+  const n = props.abertas.length
+  if (n === 0) return 'Nenhum site na rua.'
+  return `${n} ${plural(n, 'site', 'sites')} na rua.`
+})
+</script>
+
+<template>
+  <h1 class="resumo">{{ fraseAbertas }}</h1>
+</template>
+%% O título do seu funil no aprendendo-vue, que muda a frase conforme a lista (versão resumida).
+1-2: Script setup e o computed.
+4-6: O defineProps declara o que o componente recebe do pai: aqui, a lista abertas, que é obrigatória. São as props do React, só que declaradas com tipo.
+8: O computed recalcula a frase sozinho quando a lista muda.
+9-11: Com zero, mostra uma frase própria. Senão, mostra a quantidade com a palavra no singular ou no plural.
+15-17: No template, as chaves duplas mostram a frase, como as chaves { } do JSX.

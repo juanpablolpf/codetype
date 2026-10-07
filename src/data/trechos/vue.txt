@@ -1,0 +1,108 @@
+@@ Contador.vue
+<script setup>
+import { ref, computed } from "vue";
+
+const contagem = ref(0);
+const dobro = computed(() => contagem.value * 2);
+</script>
+
+<template>
+  <button @click="contagem++">
+    {{ contagem }} x 2 = {{ dobro }}
+  </button>
+</template>
+%% Um botão que conta cliques e mostra o dobro. É o "olá mundo" da reatividade do Vue.
+1: O script setup é o jeito curto do Vue 3: tudo que você declara aqui já fica disponível no template.
+2: O ref cria um valor reativo e o computed cria um valor calculado a partir de outros.
+4: A contagem começa em 0. No script você lê e muda pelo .value. É parecido com o useState do React.
+5: O dobro recalcula sozinho sempre que a contagem muda. É parecido com o useMemo, mas sem lista de dependências.
+8: O template é o HTML do componente.
+9: O @click é o atalho de v-on:click. Dentro do template não precisa de .value.
+10: As chaves duplas mostram o valor na tela e atualizam sozinhas.
+
+@@ ListaTarefas.vue
+<template>
+  <ul>
+    <li v-for="tarefa in tarefas" :key="tarefa.id">
+      <input type="checkbox" v-model="tarefa.feita" />
+      <span :class="{ riscado: tarefa.feita }">
+        {{ tarefa.titulo }}
+      </span>
+    </li>
+  </ul>
+</template>
+%% Uma lista de tarefas com checkbox que risca a tarefa feita.
+3: O v-for repete o li para cada tarefa, como o .map no JSX. O :key ajuda o Vue a saber qual item é qual quando a lista muda.
+4: O v-model liga o checkbox ao campo feita nos dois sentidos: marcar muda o dado, e mudar o dado marca o checkbox.
+5: No :class com objeto, a classe riscado só entra quando tarefa.feita for verdadeiro.
+6: Mostra o título da tarefa.
+
+@@ useLocalStorage.js
+import { ref, watch } from "vue";
+
+export function useLocalStorage(chave, inicial) {
+  const salvo = localStorage.getItem(chave);
+  const valor = ref(salvo ? JSON.parse(salvo) : inicial);
+
+  watch(valor, (novo) => {
+    localStorage.setItem(chave, JSON.stringify(novo));
+  }, { deep: true });
+
+  return valor;
+}
+%% Um composable (o "hook" do Vue): um valor reativo que se salva sozinho no navegador.
+1: O watch observa um valor reativo e roda uma função sempre que ele muda.
+3: Composables costumam começar com use. Este recebe a chave do localStorage e o valor padrão.
+4: Lê o que já foi salvo. Volta null se não houver nada.
+5: Se tinha algo salvo, converte o texto JSON para objeto. Se não tinha, usa o valor inicial.
+7-8: Sempre que o valor mudar, salva de novo como texto JSON.
+9: O deep: true faz o watch perceber mudanças dentro do objeto ou array, e não só quando ele é trocado inteiro.
+11: Devolve o ref para o componente usar como qualquer outro.
+
+@@ Formulario.vue
+<script setup>
+import { reactive } from "vue";
+
+const form = reactive({ nome: "", email: "" });
+const emit = defineEmits(["enviar"]);
+
+function enviar() {
+  emit("enviar", { ...form });
+}
+</script>
+
+<template>
+  <form @submit.prevent="enviar">
+    <input v-model.trim="form.nome" placeholder="Nome" />
+    <button type="submit">Enviar</button>
+  </form>
+</template>
+%% Um formulário que avisa o componente pai quando é enviado.
+2: O reactive deixa um objeto inteiro reativo. Diferente do ref, ele não usa .value.
+4: O estado do formulário, com nome e email começando vazios.
+5: O defineEmits declara os eventos que este componente dispara para o pai, que escuta com @enviar.
+7-9: Dispara o evento enviar com uma cópia dos dados. O ...form faz a cópia para o pai não receber o objeto reativo original.
+13: O @submit.prevent chama enviar e evita que a página recarregue (o mesmo que event.preventDefault()).
+14: O v-model.trim liga o input ao form.nome e tira os espaços das pontas.
+15: O botão do tipo submit envia o formulário.
+
+@@ carrinho.js
+import { defineStore } from "pinia";
+
+export const useCarrinho = defineStore("carrinho", {
+  state: () => ({ itens: [] }),
+  getters: {
+    total: (s) => s.itens.reduce((t, i) => t + i.preco, 0),
+  },
+  actions: {
+    adicionar(item) {
+      this.itens.push(item);
+    },
+  },
+});
+%% Uma store do Pinia: um estado global do carrinho que qualquer componente pode usar.
+1: O Pinia é a biblioteca oficial de estado global do Vue, no papel que o Redux ou o Zustand têm no React.
+3: Cria a store com o id "carrinho". Nos componentes, você usa assim: const carrinho = useCarrinho().
+4: O state é uma função que devolve o estado inicial, aqui uma lista de itens vazia.
+5-7: Os getters são valores calculados, como o computed. O total soma os preços de todos os itens.
+8-11: As actions são as funções que mudam o estado. A adicionar coloca um item no carrinho, e o this é a própria store.
